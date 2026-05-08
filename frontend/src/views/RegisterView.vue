@@ -1,0 +1,218 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+import { useRouter, RouterLink } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+
+const auth = useAuthStore();
+const router = useRouter();
+
+const email = ref('');
+const password = ref('');
+const password2 = ref('');
+const displayName = ref('');
+const loading = ref(false);
+const errorMsg = ref('');
+
+const pwdMismatch = computed(
+  () => password.value.length > 0 && password.value !== password2.value,
+);
+
+async function submit() {
+  errorMsg.value = '';
+  if (pwdMismatch.value) {
+    errorMsg.value = '两次输入的密码不一致，请检查后再提交';
+    return;
+  }
+  if (password.value.length < 8) {
+    errorMsg.value = '密码长度至少 8 位，请换一个更长的密码';
+    return;
+  }
+
+  loading.value = true;
+  try {
+    await auth.register({
+      email: email.value.trim(),
+      password: password.value,
+      displayName: displayName.value.trim() || undefined,
+    });
+    router.push('/');
+  } catch {
+    errorMsg.value = '注册未成功，可能该邮箱已有账号，或网络不稳，请稍后再试';
+  } finally {
+    loading.value = false;
+  }
+}
+</script>
+
+<template>
+  <div class="auth-page">
+    <div class="card">
+      <div class="hero">
+        <div class="logo">📝</div>
+        <h1>创建账户</h1>
+        <p class="tag">注册后可添加下载任务并管理已保存的文件</p>
+      </div>
+
+      <form class="form" @submit.prevent="submit">
+        <label class="field">
+          <span>昵称（可选，会显示在右上角）</span>
+          <input v-model="displayName" maxlength="100" />
+        </label>
+        <label class="field">
+          <span>邮箱</span>
+          <input v-model="email" type="email" required autocomplete="username" />
+        </label>
+        <label class="field">
+          <span>密码（至少 8 位）</span>
+          <input
+            v-model="password"
+            type="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+          />
+        </label>
+        <label class="field">
+          <span>确认密码</span>
+          <input
+            v-model="password2"
+            type="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+          />
+        </label>
+
+        <p v-if="pwdMismatch" class="hint">两次输入的密码不一致，请重新输入</p>
+        <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
+
+        <button class="btn primary" type="submit" :disabled="loading || pwdMismatch">
+          {{ loading ? '提交中…' : '注册' }}
+        </button>
+
+        <div class="footer">
+          <span>已有账户？</span>
+          <RouterLink to="/login">返回登录</RouterLink>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background:
+    radial-gradient(900px 400px at 10% 10%, rgba(62, 207, 142, 0.14), transparent),
+    radial-gradient(700px 500px at 90% 30%, rgba(91, 224, 255, 0.12), transparent),
+    var(--cs-bg);
+}
+
+.card {
+  width: min(440px, 100%);
+  padding: 1.75rem;
+  border-radius: 18px;
+  border: 1px solid var(--cs-border);
+  background: rgba(16, 22, 30, 0.92);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.logo {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 0.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--cs-border);
+  font-size: 1.35rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.tag {
+  margin: 0.35rem 0 0;
+  color: var(--cs-muted);
+  font-size: 0.92rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--cs-muted);
+}
+
+.field input {
+  border-radius: 12px;
+  border: 1px solid var(--cs-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cs-text);
+  padding: 0.65rem 0.75rem;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: rgba(62, 207, 142, 0.55);
+  box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.12);
+}
+
+.btn.primary {
+  margin-top: 0.25rem;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--cs-accent), #25c9b5);
+  color: #041016;
+}
+
+.btn.primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #ffd28a;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #ff8b8b;
+}
+
+.footer {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--cs-muted);
+}
+
+.footer a {
+  color: var(--cs-accent);
+  margin-left: 0.35rem;
+}
+</style>

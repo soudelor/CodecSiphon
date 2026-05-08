@@ -1,0 +1,41 @@
+:root {
+  color-scheme: dark;
+  --cs-bg: #0b0f14;
+  --cs-panel: #101821;
+  --cs-border: rgba(255, 255, 255, 0.08);
+  --cs-text: #e6edf3;
+  --cs-muted: #9fb0c3;
+  --cs-accent: #3ecf8e;
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  background-color: var(--cs-bg);
+  color: var(--cs-text);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--cs-bg);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}

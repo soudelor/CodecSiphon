@@ -1,0 +1,25 @@
+{
+  "name": "codec-siphon",
+  "private": true,
+  "description": "CodecSiphon monorepo root — install deps via npm workspaces",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "start:dev": "npm run start:dev -w backend",
+    "start:dev:web": "npm run dev -w frontend",
+    "start": "npm run start -w backend",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "build:backend": "npm run build -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "test": "npm run test -w backend",
+    "lint": "npm run lint -w backend",
+    "prisma:generate": "npm run prisma:generate -w backend",
+    "prisma:migrate": "npm run prisma:migrate -w backend",
+    "prisma:migrate:dev": "npm run prisma:migrate:dev -w backend"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
