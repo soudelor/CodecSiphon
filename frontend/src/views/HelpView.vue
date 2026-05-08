@@ -11,6 +11,12 @@ import { RouterLink } from 'vue-router';
       </p>
     </header>
 
+    <div class="card notice">
+      <p class="notice-text">
+        本应用及相关资源仅供个人学习研究使用，禁止任何商业用途。请勿用于商用、二次售卖及盈利行为，违规使用后果由使用者自行承担。
+      </p>
+    </div>
+
     <div class="card">
       <h3 class="h">快速开始</h3>
       <ol class="list">
@@ -59,6 +65,18 @@ import { RouterLink } from 'vue-router';
   max-width: 920px;
   line-height: 1.55;
   font-size: 0.9rem;
+}
+
+.notice {
+  border-color: rgba(196, 154, 74, 0.35);
+  background: rgba(196, 154, 74, 0.08);
+}
+
+.notice-text {
+  margin: 0;
+  line-height: 1.55;
+  font-size: 0.88rem;
+  color: var(--cs-text);
 }
 
 .card {

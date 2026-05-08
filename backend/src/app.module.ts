@@ -11,6 +11,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { MediaModule } from './media/media.module';
 import { SettingsModule } from './settings/settings.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { SecurityModule } from './common/security/security.module';
 import { TasksModule } from './tasks/tasks.module';
 
 /**
@@ -45,6 +46,7 @@ const envFilePaths = [...new Set(envCandidates.filter((path) => existsSync(path)
     PrismaModule,
     DownloadModule,
     AuthModule,
+    SecurityModule,
     MediaModule,
     SubscriptionsModule,
     SettingsModule,

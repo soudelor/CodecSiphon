@@ -1,9 +1,13 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  if (process.env.TRUST_PROXY === '1') {
+    app.set('trust proxy', 1);
+  }
 
   const frontendOrigins = (
     process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173,http://127.0.0.1:5173'
@@ -15,7 +19,12 @@ async function bootstrap() {
   app.enableCors({
     origin: frontendOrigins,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Client-Timestamp',
+      'X-Client-Nonce',
+    ],
     exposedHeaders: ['Content-Disposition'],
   });
 

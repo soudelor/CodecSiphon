@@ -12,6 +12,13 @@ export const api = axios.create({
 
 let refreshJob: Promise<string | null> | null = null;
 
+function antiReplayHeaders(): Record<string, string> {
+  return {
+    'X-Client-Timestamp': String(Date.now()),
+    'X-Client-Nonce': crypto.randomUUID(),
+  };
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   const rt = localStorage.getItem('refreshToken');
   if (!rt) return null;
@@ -20,7 +27,7 @@ async function refreshAccessToken(): Promise<string | null> {
     accessToken: string;
     refreshToken: string;
     user: unknown;
-  }>(`${baseURL}/auth/refresh`, { refreshToken: rt });
+  }>(`${baseURL}/auth/refresh`, { refreshToken: rt }, { headers: antiReplayHeaders() });
 
   localStorage.setItem('accessToken', data.accessToken);
   localStorage.setItem('refreshToken', data.refreshToken);
@@ -35,6 +42,12 @@ function clearSession() {
 }
 
 api.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
+  Object.assign(
+    config.headers as Record<string, string>,
+    antiReplayHeaders(),
+  );
+
   const url = config.url ?? '';
   const skipAuth =
     url.includes('/auth/login') ||

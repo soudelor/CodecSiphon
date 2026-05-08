@@ -72,6 +72,10 @@ async function onLogout() {
         </RouterLink>
       </nav>
 
+      <p class="sidebar-disclaimer">
+        本应用及相关资源仅供个人学习研究使用，禁止任何商业用途。请勿用于商用、二次售卖及盈利行为，违规使用后果由使用者自行承担。
+      </p>
+
       <div class="storage-hint">
         <div class="storage-label">存储（规划中）</div>
         <div class="storage-bar"><span style="width: 35%" /></div>
@@ -176,6 +180,14 @@ async function onLogout() {
   width: 1.25rem;
   text-align: center;
   opacity: 0.85;
+}
+
+.sidebar-disclaimer {
+  margin: 0;
+  padding: 0 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .storage-hint {
