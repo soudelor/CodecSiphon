@@ -1,0 +1,20 @@
+export default {
+  navDashboard: '仪表盘',
+  navNewTask: '新建任务',
+  navTasks: '任务管理',
+  navFiles: '文件管理',
+  navSettings: '设置',
+  navHelp: '帮助',
+  brandSub: '视频下载控制台',
+  disclaimer:
+    '本应用及相关资源仅供个人学习研究使用，禁止任何商业用途。请勿用于商用、二次售卖及盈利行为，违规使用后果由使用者自行承担。',
+  storagePlanned: '存储（规划中）',
+  storageHint: '此处将显示您的存储空间使用情况（即将推出）',
+  titleDashboard: '仪表盘',
+  titleTaskNew: '新建任务',
+  titleTasks: '任务管理',
+  titleFiles: '文件管理',
+  titleSettings: '设置',
+  titleHelp: '帮助',
+  logout: '登出',
+} as const;

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import * as authApi from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 
+const { t, locale } = useI18n();
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
@@ -24,16 +27,32 @@ const captchaImgSrc = computed(() =>
     : '',
 );
 
-const CAPTCHA_LOAD_FALLBACK =
-  '无法加载验证码，请确认后端与 Redis 可用后刷新页面';
+/** Normalize known backend zh messages to current UI language */
+function localizeAuthMessage(raw: string): string {
+  const s = raw.trim();
+  if (s === '用户名或密码错误') return t('auth.invalidLoginFallback');
+  if (s === '验证码错误或已过期，请重试')
+    return locale.value === 'en-US'
+      ? 'Incorrect or expired verification code. Please try again.'
+      : s;
+  if (s === '验证码服务不可用，请确认 Redis')
+    return locale.value === 'en-US'
+      ? 'Captcha service unavailable. Check Redis.'
+      : s;
+  return s;
+}
 
 function extractApiErrorMessage(e: unknown): string | null {
   if (!axios.isAxiosError(e)) return null;
   const raw = e.response?.data as { message?: string | string[] };
   const m = raw?.message;
-  if (typeof m === 'string' && m.trim()) return m.trim();
+  if (typeof m === 'string' && m.trim())
+    return localizeAuthMessage(m.trim());
   if (Array.isArray(m) && m.length)
-    return m.filter((x) => typeof x === 'string' && x.trim()).join('；');
+    return m
+      .filter((x) => typeof x === 'string' && x.trim())
+      .map((x) => localizeAuthMessage(x))
+      .join(locale.value === 'en-US' ? '; ' : '；');
   return null;
 }
 
@@ -47,7 +66,7 @@ async function loadCaptcha() {
   } catch (e) {
     captchaId.value = null;
     captchaSvg.value = '';
-    errorMsg.value = extractApiErrorMessage(e) ?? CAPTCHA_LOAD_FALLBACK;
+    errorMsg.value = extractApiErrorMessage(e) ?? t('auth.captchaLoadFallback');
   } finally {
     captchaLoading.value = false;
   }
@@ -60,7 +79,7 @@ onMounted(() => {
 async function submit() {
   errorMsg.value = '';
   if (!captchaId.value) {
-    errorMsg.value = '请先获取验证码';
+    errorMsg.value = t('auth.needCaptchaFirst');
     void loadCaptcha();
     return;
   }
@@ -81,12 +100,12 @@ async function submit() {
       if (m) {
         errorMsg.value = m;
       } else if (e.response?.status === 401) {
-        errorMsg.value = '用户名或密码错误';
+        errorMsg.value = t('auth.invalidLoginFallback');
       } else {
-        errorMsg.value = '网络异常，请稍后再试';
+        errorMsg.value = t('errors.networkError');
       }
     } else {
-      errorMsg.value = '网络异常，请稍后再试';
+      errorMsg.value = t('errors.networkError');
     }
   } finally {
     loading.value = false;
@@ -96,20 +115,23 @@ async function submit() {
 
 <template>
   <div class="auth-page">
+    <div class="auth-bar">
+      <LanguageSwitcher />
+    </div>
     <div class="card">
       <div class="hero">
         <div class="logo">▶</div>
         <h1>CodecSiphon</h1>
-        <p class="tag">登录后即可新建下载、查看进度与管理文件</p>
+        <p class="tag">{{ t('auth.loginTagline') }}</p>
       </div>
 
       <form class="form" @submit.prevent="submit">
         <label class="field">
-          <span>邮箱</span>
+          <span>{{ t('auth.email') }}</span>
           <input v-model="email" type="email" required autocomplete="username" />
         </label>
         <label class="field">
-          <span>密码</span>
+          <span>{{ t('auth.password') }}</span>
           <input
             v-model="password"
             type="password"
@@ -120,7 +142,7 @@ async function submit() {
         </label>
 
         <div class="field captcha-row">
-          <span>校验码</span>
+          <span>{{ t('auth.captcha') }}</span>
           <div class="captcha-line">
             <input
               v-model="captchaCode"
@@ -129,30 +151,30 @@ async function submit() {
               required
               autocomplete="off"
               maxlength="12"
-              placeholder="请输入右侧字符"
+              :placeholder="t('auth.captchaPlaceholder')"
               :disabled="captchaLoading || !captchaId"
             />
             <div class="captcha-img-wrap">
               <img
                 v-if="captchaImgSrc"
                 :src="captchaImgSrc"
-                alt="校验码"
+                :alt="t('auth.captchaAlt')"
                 class="captcha-img"
                 width="140"
                 height="44"
               />
               <span v-else class="captcha-placeholder">{{
-                captchaLoading ? '加载中…' : '未加载'
+                captchaLoading ? t('auth.captchaLoading') : t('auth.captchaNotLoaded')
               }}</span>
             </div>
             <button
               type="button"
               class="btn-refresh"
               :disabled="captchaLoading"
-              title="换一张"
+              :title="t('auth.refreshCaptchaTitle')"
               @click="loadCaptcha"
             >
-              换一张
+              {{ t('auth.refreshCaptcha') }}
             </button>
           </div>
         </div>
@@ -160,12 +182,12 @@ async function submit() {
         <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
 
         <button class="btn primary" type="submit" :disabled="loading">
-          {{ loading ? '登录中…' : '登录' }}
+          {{ loading ? t('auth.loggingIn') : t('auth.login') }}
         </button>
 
         <div class="footer">
-          <span>还没有账户？</span>
-          <RouterLink to="/register">注册</RouterLink>
+          <span>{{ t('auth.noAccount') }}</span>
+          <RouterLink to="/register">{{ t('auth.registerLink') }}</RouterLink>
         </div>
       </form>
     </div>
@@ -178,10 +200,17 @@ async function submit() {
   display: grid;
   place-items: center;
   padding: 2rem 1rem;
+  position: relative;
   background:
     radial-gradient(900px 400px at 10% 10%, rgba(62, 207, 142, 0.14), transparent),
     radial-gradient(700px 500px at 90% 30%, rgba(91, 224, 255, 0.12), transparent),
     var(--cs-bg);
+}
+
+.auth-bar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
 }
 
 .card {

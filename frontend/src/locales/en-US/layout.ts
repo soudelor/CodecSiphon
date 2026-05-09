@@ -1,0 +1,20 @@
+export default {
+  navDashboard: 'Dashboard',
+  navNewTask: 'New task',
+  navTasks: 'Tasks',
+  navFiles: 'Files',
+  navSettings: 'Settings',
+  navHelp: 'Help',
+  brandSub: 'Video download console',
+  disclaimer:
+    'This app and related resources are for personal learning and research only. Commercial use, resale, or profit is prohibited. You are responsible for any misuse.',
+  storagePlanned: 'Storage (planned)',
+  storageHint: 'Your storage usage will appear here in a future update.',
+  titleDashboard: 'Dashboard',
+  titleTaskNew: 'New task',
+  titleTasks: 'Tasks',
+  titleFiles: 'Files',
+  titleSettings: 'Settings',
+  titleHelp: 'Help',
+  logout: 'Sign out',
+} as const;

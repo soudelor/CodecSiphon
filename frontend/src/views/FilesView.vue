@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import * as mediaApi from '@/api/media';
 import type { MediaFileRow } from '@/types/models';
+
+const { t } = useI18n();
 
 const items = ref<MediaFileRow[]>([]);
 const total = ref(0);
@@ -36,7 +39,7 @@ async function load() {
     items.value = data.items;
     total.value = data.total;
   } catch {
-    errorMsg.value = '加载文件列表失败';
+    errorMsg.value = t('files.loadFailed');
   } finally {
     loading.value = false;
   }
@@ -49,8 +52,14 @@ const totalPages = () => Math.max(1, Math.ceil(total.value / limit.value));
 
 function formatBytes(s: string): string {
   const n = Number(s);
-  if (!Number.isFinite(n) || n <= 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  if (!Number.isFinite(n) || n <= 0) return `0 ${t('files.unitB')}`;
+  const units = [
+    t('files.unitB'),
+    t('files.unitKB'),
+    t('files.unitMB'),
+    t('files.unitGB'),
+    t('files.unitTB'),
+  ];
   let v = n;
   let i = 0;
   while (v >= 1024 && i < units.length - 1) {
@@ -67,7 +76,7 @@ function apiErrorMessage(err: unknown): string {
     if (Array.isArray(m)) return m.join('；');
     if (typeof m === 'string') return m;
   }
-  return '操作失败，请稍后重试';
+  return t('errors.operationFailedRetry');
 }
 
 async function downloadToLocal(m: MediaFileRow) {
@@ -83,11 +92,7 @@ async function downloadToLocal(m: MediaFileRow) {
 }
 
 async function removeFile(m: MediaFileRow) {
-  if (
-    !confirm(
-      `确定从媒体库删除「${m.fileName}」？\n\n本条记录和服务器上的实际文件都会被删除，已用空间会相应减少。`,
-    )
-  ) {
+  if (!confirm(t('files.deleteConfirm', { name: m.fileName }))) {
     return;
   }
   busyId.value = m.id;
@@ -103,16 +108,20 @@ async function removeFile(m: MediaFileRow) {
 }
 
 function taskLabel(m: MediaFileRow): string {
-  if (!m.taskId) return '—';
-  const t = m.taskTitle?.trim();
-  if (t) return t;
-  return '（历史任务无标题）';
+  if (!m.taskId) return t('files.taskDash');
+  const title = m.taskTitle?.trim();
+  if (title) return title;
+  return t('files.taskNoTitle');
 }
 
 const searchHint = computed(() =>
   qDebounced.value.trim()
-    ? `搜索「${qDebounced.value.trim()}」`
-    : '全部文件',
+    ? t('files.searchActive', { q: qDebounced.value.trim() })
+    : t('files.allFiles'),
+);
+
+const totalHint = computed(() =>
+  t('files.totalCount', { n: total.value }),
 );
 </script>
 
@@ -120,19 +129,15 @@ const searchHint = computed(() =>
   <div class="page">
     <header class="head">
       <div>
-        <h2>文件管理</h2>
-        <p class="muted">
-          这里会列出已通过下载任务保存到您账号下的视频等文件。可按文件名搜索；
-          <strong>下载</strong>
-          可把文件保存到当前电脑；删除会同时删掉服务器上的文件并更新占用空间。
-        </p>
+        <h2>{{ t('files.title') }}</h2>
+        <p class="muted" v-html="t('files.intro')" />
       </div>
       <div class="search">
         <input
           v-model="q"
           type="search"
-          placeholder="按文件名搜索…"
-          aria-label="搜索文件名"
+          :placeholder="t('files.searchPlaceholder')"
+          :aria-label="t('files.searchAria')"
         />
       </div>
     </header>
@@ -141,10 +146,10 @@ const searchHint = computed(() =>
 
     <div class="card">
       <div class="pager">
-        <span class="pi">{{ searchHint }} · 共 {{ total }} 条</span>
+        <span class="pi">{{ searchHint }} · {{ totalHint }}</span>
         <span class="spacer" />
         <label>
-          每页
+          {{ t('common.perPage') }}
           <select v-model.number="limit">
             <option :value="8">8</option>
             <option :value="12">12</option>
@@ -157,7 +162,7 @@ const searchHint = computed(() =>
           :disabled="page <= 1 || loading"
           @click="page -= 1"
         >
-          上一页
+          {{ t('common.prevPage') }}
         </button>
         <span class="pi">
           {{ page }} / {{ totalPages() }}
@@ -168,7 +173,7 @@ const searchHint = computed(() =>
           :disabled="page >= totalPages() || loading"
           @click="page += 1"
         >
-          下一页
+          {{ t('common.nextPage') }}
         </button>
       </div>
 
@@ -176,11 +181,11 @@ const searchHint = computed(() =>
         <table class="table">
           <thead>
             <tr>
-              <th>文件</th>
-              <th>大小</th>
-              <th>任务标题</th>
-              <th>添加时间</th>
-              <th class="col-actions">操作</th>
+              <th>{{ t('files.colFile') }}</th>
+              <th>{{ t('files.colSize') }}</th>
+              <th>{{ t('files.colTaskTitle') }}</th>
+              <th>{{ t('files.colAdded') }}</th>
+              <th class="col-actions">{{ t('files.colActions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -200,10 +205,10 @@ const searchHint = computed(() =>
                   type="button"
                   class="btn small accent"
                   :disabled="busyId === m.id"
-                  title="下载到本机"
+                  :title="t('files.downloadTitle')"
                   @click="downloadToLocal(m)"
                 >
-                  下载
+                  {{ t('files.download') }}
                 </button>
                 <button
                   type="button"
@@ -211,14 +216,14 @@ const searchHint = computed(() =>
                   :disabled="busyId === m.id"
                   @click="removeFile(m)"
                 >
-                  删除
+                  {{ t('files.delete') }}
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
         <p v-if="!loading && items.length === 0" class="empty muted">
-          暂无媒体文件。完成下载任务后即可在此查看。
+          {{ t('files.empty') }}
         </p>
       </div>
     </div>

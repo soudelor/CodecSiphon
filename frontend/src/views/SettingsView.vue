@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import * as settingsApi from '@/api/settings';
+
+const { t } = useI18n();
 
 const DL_FORM_KEYS = [
   'format',
@@ -36,7 +39,7 @@ function apiErrorMessage(err: unknown): string {
     if (Array.isArray(m)) return m.join('；');
     if (typeof m === 'string') return m;
   }
-  return '操作失败，请稍后重试';
+  return t('errors.operationFailedRetry');
 }
 
 function applyDownloadDefaults(dd: Record<string, unknown>) {
@@ -66,13 +69,13 @@ function buildDownloadDefaultsForSave(): Record<string, unknown> | null {
       extra === null ||
       Array.isArray(extra)
     ) {
-      throw new Error('请填写花括号 { } 包住的一组设置');
+      throw new Error(t('settings.errDlExtraJson'));
     }
   } catch (e) {
     errorMsg.value =
       e instanceof Error
-        ? `「其他下载选项」格式有误：${e.message}`
-        : '「其他下载选项」格式有误';
+        ? t('settings.errDlExtraPrefix') + e.message
+        : t('settings.errDlBare');
     return null;
   }
 
@@ -108,7 +111,7 @@ async function load() {
     applyDownloadDefaults((data.downloadDefaults ?? {}) as Record<string, unknown>);
     updatedAt.value = data.updatedAt;
   } catch {
-    errorMsg.value = '无法加载设置，请确认已登录；若仍失败，请检查网络或稍后再试';
+    errorMsg.value = t('settings.loadFailed');
   } finally {
     loading.value = false;
   }
@@ -128,11 +131,13 @@ async function save() {
       preferences === null ||
       Array.isArray(preferences)
     ) {
-      throw new Error('请使用花括号 { } 包住的一组设置');
+      throw new Error(t('settings.errPrefsJson'));
     }
   } catch (e) {
     errorMsg.value =
-      e instanceof Error ? `「个人偏好」格式有误：${e.message}` : '「个人偏好」格式有误';
+      e instanceof Error
+        ? t('settings.errPrefsJsonPrefix') + e.message
+        : t('settings.errPrefsBare');
     return;
   }
 
@@ -147,7 +152,7 @@ async function save() {
     });
     updatedAt.value = next.updatedAt;
     applyDownloadDefaults((next.downloadDefaults ?? {}) as Record<string, unknown>);
-    okMsg.value = '已保存。新建任务时，您在任务页里单独勾选的选项会覆盖这里的默认设置。';
+    okMsg.value = t('settings.okSaved');
   } catch (e) {
     errorMsg.value = apiErrorMessage(e);
   } finally {
@@ -160,12 +165,12 @@ async function save() {
   <div class="page">
     <header class="head">
       <div>
-        <h2>设置</h2>
+        <h2>{{ t('settings.title') }}</h2>
         <p class="muted">
-          「个人偏好」里可写个人习惯等扩展内容（多数用户不用改）。「默认下载选项」会用在之后新建的每一个任务上；若在新建任务时又改了选项，以任务里为准。
+          {{ t('settings.intro') }}
         </p>
         <p v-if="updatedAt" class="pi">
-          最近更新：{{ new Date(updatedAt).toLocaleString() }}
+          {{ t('settings.updatedAt', { time: new Date(updatedAt).toLocaleString() }) }}
         </p>
       </div>
       <button
@@ -174,7 +179,7 @@ async function save() {
         :disabled="loading"
         @click="load"
       >
-        重新加载
+        {{ t('settings.reload') }}
       </button>
     </header>
 
@@ -183,9 +188,9 @@ async function save() {
 
     <div v-if="!loading" class="stack">
       <div class="card">
-        <h3 class="h">个人偏好（高级）</h3>
+        <h3 class="h">{{ t('settings.prefsCard') }}</h3>
         <div class="field">
-          <label for="prefs">内容（可留空；不熟悉请保持原样）</label>
+          <label for="prefs">{{ t('settings.prefsLabel') }}</label>
           <textarea
             id="prefs"
             v-model="prefsText"
@@ -197,47 +202,47 @@ async function save() {
       </div>
 
       <div class="card">
-        <h3 class="h">默认下载选项</h3>
+        <h3 class="h">{{ t('settings.defaultsCard') }}</h3>
         <p class="muted small">
-          下列项留空表示「不强制默认」。若关闭「自动补充站点访问信息」，某些网站下载可能失败，届时可再打开试试。
+          {{ t('settings.defaultsHint') }}
         </p>
         <div class="grid">
           <div class="field">
-            <label for="fmt">画质 / 清晰度偏好</label>
-            <input id="fmt" v-model="format" placeholder="一般可留空，由系统自动选择" />
+            <label for="fmt">{{ t('settings.formatLabel') }}</label>
+            <input id="fmt" v-model="format" :placeholder="t('settings.formatPh')" />
           </div>
           <div class="field">
-            <label for="proxy">网络代理地址</label>
-            <input id="proxy" v-model="proxyUrl" placeholder="若需翻墙再填，示例：http://127.0.0.1:7890" />
+            <label for="proxy">{{ t('settings.proxyLabel') }}</label>
+            <input id="proxy" v-model="proxyUrl" :placeholder="t('settings.proxyPh')" />
           </div>
           <div class="field">
-            <label for="ref">来源页网址（部分网站校验需要）</label>
-            <input id="ref" v-model="referer" placeholder="填视频所在页面的完整网址" />
+            <label for="ref">{{ t('settings.refererLabel') }}</label>
+            <input id="ref" v-model="referer" :placeholder="t('settings.refererPh')" />
           </div>
           <div class="field">
-            <label for="ua">浏览器标识（极少数情况需要）</label>
-            <input id="ua" v-model="userAgent" placeholder="通常留空" />
+            <label for="ua">{{ t('settings.uaLabel') }}</label>
+            <input id="ua" v-model="userAgent" :placeholder="t('settings.uaPh')" />
           </div>
           <div class="field">
-            <label for="ck">Cookie 文件路径（本机上的文件）</label>
-            <input id="ck" v-model="cookiesFile" placeholder="需要登录态时，可填导出后的 Cookie 文件路径" />
+            <label for="ck">{{ t('settings.cookiesFileLabel') }}</label>
+            <input id="ck" v-model="cookiesFile" :placeholder="t('settings.cookiesFilePh')" />
           </div>
           <div class="field">
-            <label for="cfb">从本机浏览器读取 Cookie</label>
-            <input id="cfb" v-model="cookiesFromBrowser" placeholder="例如填：chrome（视环境支持情况）" />
+            <label for="cfb">{{ t('settings.cookiesBrowserLabel') }}</label>
+            <input id="cfb" v-model="cookiesFromBrowser" :placeholder="t('settings.cookiesBrowserPh')" />
           </div>
           <div class="field wide">
-            <label for="sh">自动补充站点访问信息（如来源页、浏览器标识）</label>
+            <label for="sh">{{ t('settings.siteHintsLabel') }}</label>
             <select id="sh" v-model="siteHints">
-              <option value="unset">跟随系统默认</option>
-              <option value="on">开启（多数情况推荐）</option>
-              <option value="off">关闭</option>
+              <option value="unset">{{ t('settings.siteHintsUnset') }}</option>
+              <option value="on">{{ t('settings.siteHintsOn') }}</option>
+              <option value="off">{{ t('settings.siteHintsOff') }}</option>
             </select>
           </div>
         </div>
 
         <div class="field topgap">
-          <label for="extra">其他高级参数（会与上表合并；不熟悉请保持默认不写）</label>
+          <label for="extra">{{ t('settings.extraLabel') }}</label>
           <textarea
             id="extra"
             v-model="downloadExtraText"
@@ -255,11 +260,11 @@ async function save() {
           :disabled="saving"
           @click="save"
         >
-          {{ saving ? '保存中…' : '保存全部' }}
+          {{ saving ? t('settings.saving') : t('settings.saveAll') }}
         </button>
       </div>
     </div>
-    <p v-else class="muted">加载中…</p>
+    <p v-else class="muted">{{ t('common.loading') }}</p>
   </div>
 </template>
 

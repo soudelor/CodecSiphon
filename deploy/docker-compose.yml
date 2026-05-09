@@ -1,0 +1,37 @@
+name: codec-siphon-app
+
+# 仅编排应用：PostgreSQL / MySQL 与 Redis 已在生产环境运行。
+# 使用方式见 deploy/README.md
+
+services:
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      args:
+        DATABASE_PROVIDER: ${DATABASE_PROVIDER:-postgresql}
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3000}:${PORT:-3000}"
+    env_file:
+      - .env
+    environment:
+      PORT: ${PORT:-3000}
+      DOWNLOAD_ROOT: /app/data/downloads
+    volumes:
+      - codec_siphon_downloads:/app/data/downloads
+
+  web:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+
+volumes:
+  codec_siphon_downloads:

@@ -152,6 +152,18 @@ GET /health
 
 数据库可达时返回 `200` 与 `database: "up"`；否则 `503`。
 
+## 生产部署（Docker，仅应用镜像）
+
+当 **PostgreSQL / MySQL 与 Redis 已在生产环境就绪** 时，可用 `deploy/docker-compose.yml` 一键构建并启动 **API + 前端（Nginx 静态资源）**（不包含数据库与 Redis 容器）。
+
+1. 复制 `deploy/.env.example` 为 `deploy/.env` 并填写连接串与密钥（详见 [deploy/README.md](deploy/README.md)）。
+2. 在仓库根目录执行：  
+   `npm run deploy:up`  
+   或在 `deploy/` 目录执行：  
+   `docker compose up -d --build`
+
+注意：前端 `VITE_API_URL` 在**构建**时写入；**yt-dlp** 需自行装入或挂载进 API 容器才能完成下载任务。
+
 ## API 摘要
 
 所有 JSON 接口请求体需使用 `Content-Type: application/json`。除认证与健康检查外，业务接口需携带：

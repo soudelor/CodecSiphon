@@ -1,0 +1,42 @@
+export default {
+  title: '设置',
+  loadFailed:
+    '无法加载设置，请确认已登录；若仍失败，请检查网络或稍后再试',
+  errPrefsBare: '「个人偏好」格式有误',
+  errDlBare: '「其他下载选项」格式有误',
+  intro:
+    '「个人偏好」里可写个人习惯等扩展内容（多数用户不用改）。「默认下载选项」会用在之后新建的每一个任务上；若在新建任务时又改了选项，以任务里为准。',
+  updatedAt: '最近更新：{time}',
+  reload: '重新加载',
+  prefsCard: '个人偏好（高级）',
+  prefsLabel: '内容（可留空；不熟悉请保持原样）',
+  defaultsCard: '默认下载选项',
+  defaultsHint:
+    '下列项留空表示「不强制默认」。若关闭「自动补充站点访问信息」，某些网站下载可能失败，届时可再打开试试。',
+  formatLabel: '画质 / 清晰度偏好',
+  formatPh: '一般可留空，由系统自动选择',
+  proxyLabel: '网络代理地址',
+  proxyPh: '若需翻墙再填，示例：http://127.0.0.1:7890',
+  refererLabel: '来源页网址（部分网站校验需要）',
+  refererPh: '填视频所在页面的完整网址',
+  uaLabel: '浏览器标识（极少数情况需要）',
+  uaPh: '通常留空',
+  cookiesFileLabel: 'Cookie 文件路径（本机上的文件）',
+  cookiesFilePh: '需要登录态时，可填导出后的 Cookie 文件路径',
+  cookiesBrowserLabel: '从本机浏览器读取 Cookie',
+  cookiesBrowserPh: '例如填：chrome（视环境支持情况）',
+  siteHintsLabel: '自动补充站点访问信息（如来源页、浏览器标识）',
+  siteHintsUnset: '跟随系统默认',
+  siteHintsOn: '开启（多数情况推荐）',
+  siteHintsOff: '关闭',
+  extraLabel:
+    '其他高级参数（会与上表合并；不熟悉请保持默认不写）',
+  saveAll: '保存全部',
+  saving: '保存中…',
+  okSaved:
+    '已保存。新建任务时，您在任务页里单独勾选的选项会覆盖这里的默认设置。',
+  errPrefsJson: '请使用花括号 { } 包住的一组设置',
+  errPrefsJsonPrefix: '「个人偏好」格式有误：',
+  errDlExtraJson: '请填写花括号 { } 包住的一组设置',
+  errDlExtraPrefix: '「其他下载选项」格式有误：',
+} as const;

@@ -1,48 +1,69 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
+
+const { t } = useI18n();
 </script>
 
 <template>
   <div class="page">
     <header class="head">
-      <h2>帮助</h2>
+      <h2>{{ t('help.title') }}</h2>
       <p class="muted">
-        本站用于添加视频下载、查看进度，并在「文件管理」里浏览、下载或删除已保存的文件。更细的部署与开发说明见仓库内文档，普通使用时只需按下列步骤操作即可。
+        {{ t('help.intro') }}
       </p>
     </header>
 
     <div class="card notice">
       <p class="notice-text">
-        本应用及相关资源仅供个人学习研究使用，禁止任何商业用途。请勿用于商用、二次售卖及盈利行为，违规使用后果由使用者自行承担。
+        {{ t('help.notice') }}
       </p>
     </div>
 
     <div class="card">
-      <h3 class="h">快速开始</h3>
+      <h3 class="h">{{ t('help.quickStart') }}</h3>
       <ol class="list">
-        <li>使用管理员提供的地址打开本站，注册或登录账号。</li>
-        <li>在「新建任务」粘贴视频或列表链接，先点「检测链接」确认信息，再选画质与格式后开始下载。</li>
-        <li>在「任务管理」查看排队、进行中和已结束的任务，可按需暂停、继续、重试或删除。</li>
-        <li>任务完成后，到「文件管理」搜索文件名，可把文件下载到本机，或删除不需要的条目。</li>
-        <li>在「设置」里可配置默认画质、代理、来源页等；新建任务时再改的选项会覆盖这里的默认项。</li>
+        <li>{{ t('help.step1') }}</li>
+        <li>{{ t('help.step2') }}</li>
+        <li>{{ t('help.step3') }}</li>
+        <li>{{ t('help.step4') }}</li>
+        <li>{{ t('help.step5') }}</li>
       </ol>
     </div>
 
     <div class="card">
-      <h3 class="h">站内入口</h3>
+      <h3 class="h">{{ t('help.navTitle') }}</h3>
       <ul class="list flat">
-        <li><RouterLink to="/tasks">任务管理</RouterLink> — 查看与控制下载进度</li>
-        <li><RouterLink to="/files">文件管理</RouterLink> — 浏览已下好的文件，下载到电脑或删除</li>
-        <li><RouterLink to="/settings">设置</RouterLink> — 默认下载行为与个人偏好</li>
+        <li>
+          <RouterLink to="/tasks">{{ t('help.navTasks') }}</RouterLink> —
+          {{ t('help.navTasksDesc') }}
+        </li>
+        <li>
+          <RouterLink to="/files">{{ t('help.navFiles') }}</RouterLink> —
+          {{ t('help.navFilesDesc') }}
+        </li>
+        <li>
+          <RouterLink to="/settings">{{ t('help.navSettings') }}</RouterLink> —
+          {{ t('help.navSettingsDesc') }}
+        </li>
       </ul>
     </div>
 
     <div class="card">
-      <h3 class="h">常见问题</h3>
+      <h3 class="h">{{ t('help.faqTitle') }}</h3>
       <ul class="list flat">
-        <li><strong>页面打不开或一直转圈</strong>：检查网络；若为公司内网，请联系管理员确认服务地址与白名单。</li>
-        <li><strong>检测链接失败</strong>：把同一地址复制到浏览器里试播；能播放仍失败时，可在「设置」里填写来源页网址或登录相关选项后再试。</li>
-        <li><strong>删除任务会怎样</strong>：会取消未完成的下载，并删除该任务对应的已下载文件夹及文件库中的记录，且不可恢复。</li>
+        <li>
+          <strong>{{ t('help.faqPageLoad') }}</strong
+          >：{{ t('help.faqPageLoadAns') }}
+        </li>
+        <li>
+          <strong>{{ t('help.faqDetect') }}</strong
+          >：{{ t('help.faqDetectAns') }}
+        </li>
+        <li>
+          <strong>{{ t('help.faqDelete') }}</strong
+          >：{{ t('help.faqDeleteAns') }}
+        </li>
       </ul>
     </div>
   </div>
