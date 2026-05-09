@@ -8,7 +8,7 @@
 |------|------|
 | 运行时 | Node.js（建议 LTS ≥ 20） |
 | 框架 | NestJS 11 |
-| ORM / 迁移 | Prisma 5 + PostgreSQL |
+| ORM / 迁移 | Prisma 5；**PostgreSQL**（默认）或 **MySQL**（`DATABASE_PROVIDER=mysql`，见 `backend/.env.example`） |
 | 认证 | JWT（Access）+ 数据库存 Refresh Token（SHA-256 哈希） |
 | 校验 | class-validator / class-transformer |
 | Web UI | Vue 3、Vue Router、Pinia、Axios、Vite |
@@ -43,7 +43,7 @@ CodecSiphon/
 
 - Node.js ≥ 20（推荐）
 - Docker（可选，用于一键启动 PostgreSQL + Redis）
-- 本地或远程 **PostgreSQL**（与 `DATABASE_URL` 一致）
+- 本地或远程 **PostgreSQL** 或 **MySQL**（与 `DATABASE_PROVIDER`、`DATABASE_URL` 一致；迁移说明见下）
 - **Redis**（与 `REDIS_URL` 一致；BullMQ 入队与 Worker 消费需要；与 API 在同一进程内由 Nest 启动）。
 
 可选：配置 **`YTDLP_PATH`** 或确保本机 PATH 中有 **yt-dlp**，否则下载 Worker 无法执行外部下载命令。
@@ -65,7 +65,8 @@ docker compose up -d
 
 编辑 `.env`，至少设置：
 
-- `DATABASE_URL`：PostgreSQL 连接串  
+- `DATABASE_PROVIDER`：`postgresql`（默认）或 `mysql`  
+- `DATABASE_URL`：与所选类型一致的连接串（示例见 `.env.example`）  
 - `JWT_SECRET`：**生产环境必填**，请使用足够长的随机串；本地开发若未设置，进程会使用内置临时密钥并打日志警告（重启后 token 会失效，建议仍从 `.env.example` 复制一行）。  
 
 说明见 `backend/.env.example`。重要变量还包括 **`REDIS_URL`**（队列）、**`DOWNLOAD_ROOT`**（服务端存放媒体文件的根目录）、**`YTDLP_PATH`**（可选）及若干 **`YTDLP_*`** 站点相关参数。应用会优先读取 **`backend/.env`**（相对源码/编译目录解析，不依赖你从哪一级目录启动），再合并当前工作目录下的 `.env`（便于 monorepo 根目录覆盖变量）。若使用自带前端开发服务器，请在 `backend/.env` 中配置 **`FRONTEND_ORIGIN`**（默认已包含 `http://localhost:5173`），以便 CORS 通过；媒体文件下载接口会暴露 **`Content-Disposition`** 响应头（用于浏览器端解析建议文件名）。
@@ -85,15 +86,20 @@ cd backend
 npm install
 ```
 
+安装时会根据 **`backend/.env`** 中的 **`DATABASE_PROVIDER`**（默认 `postgresql`）将 `schema.postgresql.prisma` 或 `schema.mysql.prisma` 同步为 `prisma/schema.prisma`，再执行 `prisma generate`。**修改 Prisma 模型时**：编辑 `prisma/schema.postgresql.prisma`，运行 `npm run prisma:schemas`（会重新生成 MySQL 版 schema 并同步当前 provider 的 `schema.prisma`）。
+
 数据库相关命令需在 `backend/` 下执行（或见下文「根目录脚本」）：
 
 ```bash
 cd backend
-npx prisma generate
-npx prisma migrate deploy
+npm run prisma:generate
+npm run prisma:migrate
 ```
 
-开发中若需改 schema 并生成新迁移：
+- **PostgreSQL**：`prisma/migrations` 下的 SQL 仅适用于 PostgreSQL；生产/本地用 `npm run prisma:migrate`（即 `migrate deploy`）。
+- **MySQL**：请在 `.env` 中设置 `DATABASE_PROVIDER=mysql` 与 `DATABASE_URL`（`mysql://…`）。`npm install` / `npm run prisma:generate` 会选用 MySQL schema。**首个空库**可执行 `npm run prisma:db:push` 同步表结构；不要用当前迁移目录对 MySQL 跑 `migrate deploy`（迁移 SQL 为 PostgreSQL 专用）。
+
+开发中若需改 schema 并生成新迁移（**仅 PostgreSQL**）：
 
 ```bash
 cd backend

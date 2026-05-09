@@ -8,6 +8,15 @@ const ACTIVE: TaskStatus[] = [
   'processing',
 ];
 
+/** 这些状态下的任务进度可能在后台持续变化，列表宜轮询刷新。 */
+export function taskNeedsLiveProgress(t: DownloadTask): boolean {
+  return ACTIVE.includes(t.status);
+}
+
+export function taskListNeedsLivePolling(items: DownloadTask[]): boolean {
+  return items.some(taskNeedsLiveProgress);
+}
+
 export function canPauseTask(t: DownloadTask): boolean {
   return ACTIVE.includes(t.status);
 }

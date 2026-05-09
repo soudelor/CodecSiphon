@@ -1,12 +1,23 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { CaptchaService } from './captcha.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
+import { SkipReplay } from '../common/security/skip-replay.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly captcha: CaptchaService,
+  ) {}
+
+  @Get('captcha')
+  @SkipReplay()
+  captchaChallenge() {
+    return this.captcha.create();
+  }
 
   @Post('register')
   register(@Body() dto: RegisterDto) {

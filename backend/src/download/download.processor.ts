@@ -13,6 +13,7 @@ import {
   guessMime,
 } from './storage.util';
 import { runYtdlp } from './ytdlp.runner';
+import { sourceUrlsFromJson } from '../common/source-urls.util';
 
 export type DownloadJobPayload = {
   taskId: string;
@@ -360,7 +361,7 @@ export class DownloadProcessor extends WorkerHost {
     userId: string;
     sourceType: TaskSourceType;
     sourceUrl: string | null;
-    sourceUrls: string[];
+    sourceUrls: Prisma.JsonValue;
     subscriptionId: string | null;
   }): Promise<string[]> {
     if (
@@ -370,7 +371,7 @@ export class DownloadProcessor extends WorkerHost {
       return task.sourceUrl ? [task.sourceUrl] : [];
     }
     if (task.sourceType === TaskSourceType.multi_url) {
-      return [...task.sourceUrls];
+      return sourceUrlsFromJson(task.sourceUrls);
     }
     if (task.sourceType === TaskSourceType.subscription) {
       if (task.sourceUrl) return [task.sourceUrl];

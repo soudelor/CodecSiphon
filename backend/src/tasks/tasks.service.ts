@@ -21,6 +21,7 @@ import { QUEUE_DOWNLOAD } from '../download/download.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { mapYtDlpJsonToPreview, ytDlpDumpJson } from '../download/ytdlp.dump';
 import { getMultiUrlMaxLinks } from '../common/download-limits';
+import { sourceUrlsFromJson } from '../common/source-urls.util';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -36,8 +37,10 @@ function isActivelyDownloading(s: TaskStatus): boolean {
 }
 
 function serializeTask(task: DownloadTask) {
+  const { sourceUrls: rawUrls, ...rest } = task;
   return {
-    ...task,
+    ...rest,
+    sourceUrls: sourceUrlsFromJson(rawUrls),
     bytesDownloaded: task.bytesDownloaded.toString(),
     bytesTotal: task.bytesTotal !== null ? task.bytesTotal.toString() : null,
   };
@@ -313,16 +316,17 @@ export class TasksService {
     if (dto.status === TaskStatus.queued) {
       if (existing.status === TaskStatus.paused) {
         try {
-          await this.ensureDownloadJob(id);
+          await this.ensureDownloadJob(id, { resumeFromPaused: true });
         } catch (err) {
           if (err instanceof BadRequestException) throw err;
           throw new ServiceUnavailableException(
             '无法重新入队，请检查 Redis 与队列配置',
           );
         }
+        const resumedStatus = await this.resolveStatusAfterResumeFromPaused(id);
         const task = await this.prisma.downloadTask.update({
           where: { id },
-          data: { status: TaskStatus.queued },
+          data: { status: resumedStatus },
         });
         return serializeTask(task);
       }
@@ -437,10 +441,32 @@ export class TasksService {
   }
 
   /**
-   * 为继续/重试准备队列：若已有非活动作业则移除后重新添加。
-   * 活动中的作业会拒绝，避免重复 Worker。
+   * 从暂停恢复：若 Worker 仍在执行同一作业（active），进度可能仍在走，应显示「下载中」而非「排队中」。
    */
-  private async ensureDownloadJob(taskId: string): Promise<void> {
+  private async resolveStatusAfterResumeFromPaused(
+    taskId: string,
+  ): Promise<TaskStatus> {
+    const job = await this.downloadQueue.getJob(taskId);
+    if (!job) {
+      return TaskStatus.queued;
+    }
+    const state = await job.getState();
+    if (state === 'active') {
+      return TaskStatus.downloading;
+    }
+    return TaskStatus.queued;
+  }
+
+  /**
+   * 为继续/重试准备队列：若已有非活动作业则移除后重新添加。
+   * `resumeFromPaused`：暂停后继续时，作业可能仍为 active（ Worker 正在跑完当前 yt-dlp 段），
+   * 此时只更新 DB 为 queued 即可，Worker 下一轮循环会读到新状态，不得抛错也不得重复入队。
+   */
+  private async ensureDownloadJob(
+    taskId: string,
+    options?: { resumeFromPaused?: boolean },
+  ): Promise<void> {
+    const resumeFromPaused = options?.resumeFromPaused === true;
     const job = await this.downloadQueue.getJob(taskId);
     if (job) {
       const state = await job.getState();
@@ -448,6 +474,9 @@ export class TasksService {
         return;
       }
       if (state === 'active') {
+        if (resumeFromPaused) {
+          return;
+        }
         throw new BadRequestException(
           '任务正在执行中，请等待当前进度结束后再继续',
         );

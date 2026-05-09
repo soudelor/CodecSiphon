@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import axios from 'axios';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
+import * as authApi from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 
 const auth = useAuthStore();
@@ -9,21 +11,83 @@ const route = useRoute();
 
 const email = ref('');
 const password = ref('');
+const captchaId = ref<string | null>(null);
+const captchaCode = ref('');
+const captchaSvg = ref('');
+const captchaLoading = ref(false);
 const loading = ref(false);
 const errorMsg = ref('');
 
+const captchaImgSrc = computed(() =>
+  captchaSvg.value
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(captchaSvg.value)}`
+    : '',
+);
+
+const CAPTCHA_LOAD_FALLBACK =
+  '无法加载验证码，请确认后端与 Redis 可用后刷新页面';
+
+function extractApiErrorMessage(e: unknown): string | null {
+  if (!axios.isAxiosError(e)) return null;
+  const raw = e.response?.data as { message?: string | string[] };
+  const m = raw?.message;
+  if (typeof m === 'string' && m.trim()) return m.trim();
+  if (Array.isArray(m) && m.length)
+    return m.filter((x) => typeof x === 'string' && x.trim()).join('；');
+  return null;
+}
+
+async function loadCaptcha() {
+  captchaLoading.value = true;
+  captchaCode.value = '';
+  try {
+    const data = await authApi.fetchLoginCaptcha();
+    captchaId.value = data.captchaId;
+    captchaSvg.value = data.svg;
+  } catch (e) {
+    captchaId.value = null;
+    captchaSvg.value = '';
+    errorMsg.value = extractApiErrorMessage(e) ?? CAPTCHA_LOAD_FALLBACK;
+  } finally {
+    captchaLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  void loadCaptcha();
+});
+
 async function submit() {
   errorMsg.value = '';
+  if (!captchaId.value) {
+    errorMsg.value = '请先获取验证码';
+    void loadCaptcha();
+    return;
+  }
   loading.value = true;
   try {
-    await auth.login(email.value.trim(), password.value);
+    await auth.login(
+      email.value.trim(),
+      password.value,
+      captchaId.value,
+      captchaCode.value.trim(),
+    );
     const redirect = route.query.redirect as string | undefined;
     router.push(redirect && redirect.startsWith('/') ? redirect : '/');
   } catch (e: unknown) {
-    errorMsg.value =
-      e && typeof e === 'object' && 'response' in e
-        ? '登录未成功，请确认邮箱与密码是否正确'
-        : '网络异常，请稍后再试';
+    void loadCaptcha();
+    if (axios.isAxiosError(e)) {
+      const m = extractApiErrorMessage(e);
+      if (m) {
+        errorMsg.value = m;
+      } else if (e.response?.status === 401) {
+        errorMsg.value = '用户名或密码错误';
+      } else {
+        errorMsg.value = '网络异常，请稍后再试';
+      }
+    } else {
+      errorMsg.value = '网络异常，请稍后再试';
+    }
   } finally {
     loading.value = false;
   }
@@ -54,6 +118,44 @@ async function submit() {
             autocomplete="current-password"
           />
         </label>
+
+        <div class="field captcha-row">
+          <span>校验码</span>
+          <div class="captcha-line">
+            <input
+              v-model="captchaCode"
+              type="text"
+              class="captcha-input"
+              required
+              autocomplete="off"
+              maxlength="12"
+              placeholder="请输入右侧字符"
+              :disabled="captchaLoading || !captchaId"
+            />
+            <div class="captcha-img-wrap">
+              <img
+                v-if="captchaImgSrc"
+                :src="captchaImgSrc"
+                alt="校验码"
+                class="captcha-img"
+                width="140"
+                height="44"
+              />
+              <span v-else class="captcha-placeholder">{{
+                captchaLoading ? '加载中…' : '未加载'
+              }}</span>
+            </div>
+            <button
+              type="button"
+              class="btn-refresh"
+              :disabled="captchaLoading"
+              title="换一张"
+              @click="loadCaptcha"
+            >
+              换一张
+            </button>
+          </div>
+        </div>
 
         <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
 
@@ -146,6 +248,72 @@ h1 {
 .field input:focus {
   border-color: rgba(62, 207, 142, 0.55);
   box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.12);
+}
+
+.captcha-row .captcha-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.captcha-input {
+  flex: 1;
+  min-width: 7rem;
+  border-radius: 12px;
+  border: 1px solid var(--cs-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cs-text);
+  padding: 0.65rem 0.75rem;
+  outline: none;
+}
+
+.captcha-input:focus {
+  border-color: rgba(62, 207, 142, 0.55);
+  box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.12);
+}
+
+.captcha-img-wrap {
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--cs-border);
+  background: #0d141c;
+}
+
+.captcha-img {
+  display: block;
+  vertical-align: middle;
+}
+
+.captcha-placeholder {
+  display: grid;
+  place-items: center;
+  width: 140px;
+  height: 44px;
+  font-size: 0.75rem;
+  color: var(--cs-muted);
+}
+
+.btn-refresh {
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 1px solid var(--cs-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--cs-muted);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  border-color: rgba(62, 207, 142, 0.45);
+  color: var(--cs-accent);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btn.primary {

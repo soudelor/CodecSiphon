@@ -42,8 +42,13 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user');
   }
 
-  async function login(email: string, password: string) {
-    const data = await authApi.login(email, password);
+  async function login(
+    email: string,
+    password: string,
+    captchaId: string,
+    captchaCode: string,
+  ) {
+    const data = await authApi.login(email, password, captchaId, captchaCode);
     persistSession(data);
   }
 

@@ -18,9 +18,13 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
-    "prisma:migrate:dev": "prisma migrate dev"
+    "postinstall": "node scripts/sync-prisma-provider.mjs",
+    "prisma:sync": "node scripts/sync-prisma-provider.mjs",
+    "prisma:schemas": "node scripts/gen-mysql-schema.mjs && node scripts/sync-prisma-provider.mjs",
+    "prisma:generate": "npm run prisma:sync && prisma generate",
+    "prisma:migrate": "npm run prisma:sync && prisma migrate deploy",
+    "prisma:migrate:dev": "npm run prisma:sync && prisma migrate dev",
+    "prisma:db:push": "npm run prisma:sync && prisma db push"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
