@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 
 /** 与常见桌面 Chrome 接近；B 站等对缺 UA 的请求易返回 412 */
-const DEFAULT_BILIBILI_UA =
+export const DEFAULT_BILIBILI_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 export type RunYtdlpParams = {

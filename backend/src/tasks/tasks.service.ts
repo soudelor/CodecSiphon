@@ -184,7 +184,14 @@ export class TasksService {
       this.config.get<string>('YTDLP_PATH') ??
       (process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
     try {
-      const raw = await ytDlpDumpJson(bin, trimmed);
+      const raw = await ytDlpDumpJson(bin, trimmed, {
+        userAgent: this.config.get<string>('YTDLP_USER_AGENT') ?? undefined,
+        referer: this.config.get<string>('YTDLP_REFERER') ?? undefined,
+        cookiesFile: this.config.get<string>('YTDLP_COOKIES_FILE') ?? undefined,
+        cookiesFromBrowser:
+          this.config.get<string>('YTDLP_COOKIES_FROM_BROWSER') ?? undefined,
+        siteHints: true,
+      });
       return mapYtDlpJsonToPreview(raw);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

@@ -1,4 +1,9 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import {
+  DEFAULT_BILIBILI_UA,
+  isBilibiliUrl,
+} from './ytdlp.runner';
 
 const MAX_STDOUT = 32 * 1024 * 1024;
 
@@ -58,10 +63,29 @@ function asNumber(v: unknown): number | null {
 }
 
 export function mapYtDlpJsonToPreview(data: unknown): TaskPreviewResult {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('无效的 yt-dlp JSON');
+  let root: unknown = data;
+  if (Array.isArray(root)) {
+    const [only] = root;
+    if (
+      root.length === 1 &&
+      only != null &&
+      typeof only === 'object' &&
+      !Array.isArray(only)
+    ) {
+      root = only;
+    } else {
+      throw new Error(
+        `无效的 yt-dlp JSON：根为数组（长度 ${root.length}），请升级 yt-dlp（yt-dlp -U）或用服务器执行相同参数核查输出`,
+      );
+    }
   }
-  const d = data as Record<string, unknown>;
+  if (root == null || typeof root !== 'object' || Array.isArray(root)) {
+    const kind = root == null ? 'null' : typeof root;
+    throw new Error(
+      `无效的 yt-dlp JSON：根须为对象，实际为 ${kind}。请确认 YTDLP_PATH 指向官方 yt-dlp 且进程 cwd 无脚本污染 stdout`,
+    );
+  }
+  const d = root as Record<string, unknown>;
   const entriesRaw = d.entries;
 
   const isPlaylist =
@@ -119,13 +143,60 @@ export function mapYtDlpJsonToPreview(data: unknown): TaskPreviewResult {
   };
 }
 
+export type YtDlpDumpOptions = {
+  flatPlaylist?: boolean;
+  timeoutMs?: number;
+  /** 与下载任务一致：B 站 412 时常需 Cookie 文件 */
+  userAgent?: string;
+  referer?: string;
+  cookiesFile?: string;
+  cookiesFromBrowser?: string;
+  /**
+   * 默认为 true：对 bilibili 等自动补 Referer + UA（可被 referer / userAgent 覆盖）
+   */
+  siteHints?: boolean;
+};
+
+function appendBrowserLikeArgs(args: string[], url: string, opts: YtDlpDumpOptions) {
+  const siteHints = opts.siteHints !== false;
+  const headerSet = new Map<string, string>();
+  if (opts.referer?.trim()) {
+    headerSet.set('referer', `Referer:${opts.referer.trim()}`);
+  }
+  if (siteHints && isBilibiliUrl(url)) {
+    if (!headerSet.has('referer')) {
+      headerSet.set('referer', 'Referer:https://www.bilibili.com/');
+    }
+  }
+  const ua =
+    (opts.userAgent?.trim() ||
+      (siteHints && isBilibiliUrl(url) ? DEFAULT_BILIBILI_UA : '')) ||
+    undefined;
+  if (ua) {
+    args.push('--user-agent', ua);
+  }
+  for (const h of headerSet.values()) {
+    args.push('--add-header', h);
+  }
+  if (opts.cookiesFile?.trim()) {
+    const fp = opts.cookiesFile.trim();
+    if (!existsSync(fp)) {
+      throw new Error(`Cookie 文件不存在: ${fp}`);
+    }
+    args.push('--cookies', fp);
+  }
+  if (opts.cookiesFromBrowser?.trim()) {
+    args.push('--cookies-from-browser', opts.cookiesFromBrowser.trim());
+  }
+}
+
 /**
  * 仅拉取元数据：yt-dlp -J --skip-download（列表类链接默认加 --flat-playlist）。
  */
 export async function ytDlpDumpJson(
   bin: string,
   url: string,
-  opts: { flatPlaylist?: boolean; timeoutMs?: number } = {},
+opts: YtDlpDumpOptions = {},
 ): Promise<unknown> {
   const timeoutMs = opts.timeoutMs ?? 120_000;
   const useFlat =
@@ -133,6 +204,7 @@ export async function ytDlpDumpJson(
     (/[?&]list=[^&]+/.test(url) || /\/playlist\?/i.test(url));
 
   const args = ['-J', '--skip-download', '--no-warnings'];
+  appendBrowserLikeArgs(args, url, opts);
   if (useFlat) {
     args.push('--flat-playlist');
   }
@@ -202,7 +274,16 @@ export async function ytDlpDumpJson(
         return;
       }
       try {
-        resolve(JSON.parse(raw) as unknown);
+        const parsed = JSON.parse(raw) as unknown;
+        if (parsed === null) {
+          reject(
+            new Error(
+              'yt-dlp 输出为 null（常见于 B 站 HTTP 412）。请在服务器配置已登录 bilibili 的 Cookie 文件：backend/.env 中 YTDLP_COOKIES_FILE=/绝对路径/cookies.txt（Netscape 格式），无头服务器勿用 cookies-from-browser',
+            ),
+          );
+          return;
+        }
+        resolve(parsed);
       } catch {
         reject(
           new Error(
