@@ -4,6 +4,7 @@ import {
   DEFAULT_BILIBILI_UA,
   isBilibiliUrl,
 } from './ytdlp.runner';
+import { PreviewMetadataError } from './preview-metadata.error';
 
 const MAX_STDOUT = 32 * 1024 * 1024;
 
@@ -74,15 +75,17 @@ export function mapYtDlpJsonToPreview(data: unknown): TaskPreviewResult {
     ) {
       root = only;
     } else {
-      throw new Error(
-        `无效的 yt-dlp JSON：根为数组（长度 ${root.length}），请升级 yt-dlp（yt-dlp -U）或用服务器执行相同参数核查输出`,
+      throw new PreviewMetadataError(
+        'errors.previewMetadataArray',
+        `preview map: root JSON array length=${root.length}`,
       );
     }
   }
   if (root == null || typeof root !== 'object' || Array.isArray(root)) {
     const kind = root == null ? 'null' : typeof root;
-    throw new Error(
-      `无效的 yt-dlp JSON：根须为对象，实际为 ${kind}。请确认 YTDLP_PATH 指向官方 yt-dlp 且进程 cwd 无脚本污染 stdout`,
+    throw new PreviewMetadataError(
+      'errors.previewMetadataInvalid',
+      `preview map: root not object, kind=${kind}`,
     );
   }
   const d = root as Record<string, unknown>;
@@ -181,7 +184,10 @@ function appendBrowserLikeArgs(args: string[], url: string, opts: YtDlpDumpOptio
   if (opts.cookiesFile?.trim()) {
     const fp = opts.cookiesFile.trim();
     if (!existsSync(fp)) {
-      throw new Error(`Cookie 文件不存在: ${fp}`);
+      throw new PreviewMetadataError(
+        'errors.previewMetadataCookieFileMissing',
+        `cookie file missing: ${fp}`,
+      );
     }
     args.push('--cookies', fp);
   }
@@ -231,7 +237,12 @@ export async function ytDlpDumpJson(
           /* ignore */
         }
       }
-      reject(new Error(`yt-dlp 元数据请求超时（${timeoutMs / 1000}s）`));
+      reject(
+        new PreviewMetadataError(
+          'errors.previewMetadataTimeout',
+          `dump json timeout after ${timeoutMs}ms`,
+        ),
+      );
     }, timeoutMs);
 
     const cleanup = () => clearTimeout(timer);
@@ -248,7 +259,12 @@ export async function ytDlpDumpJson(
           }
         }
         cleanup();
-        reject(new Error('yt-dlp 输出过大，请缩小播放列表或改用分段范围'));
+        reject(
+          new PreviewMetadataError(
+            'errors.previewMetadataTooLarge',
+            'dump json stdout exceeded cap',
+          ),
+        );
         return;
       }
       chunks.push(b);
@@ -258,7 +274,13 @@ export async function ytDlpDumpJson(
 
     child.on('error', (err) => {
       cleanup();
-      if (!killed) reject(err);
+      if (!killed)
+        reject(
+          new PreviewMetadataError(
+            'errors.previewMetadataToolFailed',
+            err instanceof Error ? err.message : String(err),
+          ),
+        );
     });
 
     child.on('close', (code) => {
@@ -267,8 +289,9 @@ export async function ytDlpDumpJson(
       const raw = Buffer.concat(chunks).toString('utf8').trim();
       if (!raw) {
         reject(
-          new Error(
-            `yt-dlp 无可用输出（exit ${code ?? 'unknown'}），请检查 URL、Cookie 或升级 yt-dlp`,
+          new PreviewMetadataError(
+            'errors.previewMetadataEmpty',
+            `dump json empty stdout exit=${code ?? 'unknown'}`,
           ),
         );
         return;
@@ -277,8 +300,9 @@ export async function ytDlpDumpJson(
         const parsed = JSON.parse(raw) as unknown;
         if (parsed === null) {
           reject(
-            new Error(
-              'yt-dlp 输出为 null（常见于 B 站 HTTP 412）。请在服务器配置已登录 bilibili 的 Cookie 文件：backend/.env 中 YTDLP_COOKIES_FILE=/绝对路径/cookies.txt（Netscape 格式），无头服务器勿用 cookies-from-browser',
+            new PreviewMetadataError(
+              'errors.previewMetadataNull',
+              'dump json parsed null (often HTTP 412 / geo / login required)',
             ),
           );
           return;
@@ -286,8 +310,9 @@ export async function ytDlpDumpJson(
         resolve(parsed);
       } catch {
         reject(
-          new Error(
-            `无法解析 yt-dlp JSON（exit ${code ?? 'unknown'}）：${raw.slice(0, 500)}`,
+          new PreviewMetadataError(
+            'errors.previewMetadataParseFailed',
+            `dump json parse failed exit=${code ?? 'unknown'} head=${raw.slice(0, 500)}`,
           ),
         );
       }

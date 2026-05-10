@@ -4,4 +4,19 @@ export default {
   loadSettingsFailed:
     'Could not load settings. Make sure you are signed in, then check your network.',
   networkError: 'Network error. Please try again later.',
+
+  previewUrlRequired: 'Please enter a URL',
+  previewMetadataArray:
+    'Could not read video info from this page (unexpected response shape).',
+  previewMetadataInvalid: 'This link does not look like a supported media page.',
+  previewMetadataCookieFileMissing:
+    'The server is missing a configured cookie file. Ask an administrator to fix the setup.',
+  previewMetadataTimeout: 'The check timed out. Please try again later.',
+  previewMetadataTooLarge: 'The response was too large. Try another link or try again later.',
+  previewMetadataToolFailed: 'The checker is temporarily unavailable. Please try again later.',
+  previewMetadataEmpty: 'No usable content was returned for this link.',
+  previewMetadataNull:
+    'Could not fetch video info for this link. Some sites require the server to be signed in; ask an administrator if this keeps happening.',
+  previewMetadataParseFailed: 'Could not parse the video metadata. Please try again later.',
+  previewMetadataFailed: 'Link check failed. Please try again later.',
 } as const;

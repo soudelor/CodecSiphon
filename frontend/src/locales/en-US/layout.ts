@@ -19,4 +19,6 @@ export default {
   titleSettings: 'Settings',
   titleHelp: 'Help',
   logout: 'Sign out',
+  sidebarCollapse: 'Collapse sidebar',
+  sidebarExpand: 'Expand sidebar',
 } as const;

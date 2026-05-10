@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter, RouterLink, RouterView } from 'vue-router';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
@@ -9,6 +9,30 @@ const { t } = useI18n();
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+
+const SIDEBAR_STORAGE_KEY = 'codec-siphon-sidebar-collapsed';
+
+const sidebarCollapsed = ref(false);
+
+onMounted(() => {
+  try {
+    sidebarCollapsed.value = localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1';
+  } catch {
+    /* private mode / unavailable */
+  }
+});
+
+watch(sidebarCollapsed, (v) => {
+  try {
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, v ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+});
+
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+}
 
 const displayName = computed(
   () => auth.user?.displayName || auth.user?.email || t('common.user'),
@@ -52,14 +76,36 @@ async function onLogout() {
 </script>
 
 <template>
-  <div class="shell">
+  <div class="shell" :class="{ 'shell--collapsed': sidebarCollapsed }">
     <aside class="sidebar">
       <div class="brand">
-        <span class="brand-mark">▶</span>
-        <div>
-          <div class="brand-title">{{ t('layout.brandTitle') }}</div>
-          <div class="brand-sub">{{ t('layout.brandSub') }}</div>
+        <div class="brand-lockup">
+          <span class="brand-mark">▶</span>
+          <div v-show="!sidebarCollapsed" class="brand-text">
+            <div class="brand-title">{{ t('layout.brandTitle') }}</div>
+            <div class="brand-sub">{{ t('layout.brandSub') }}</div>
+          </div>
         </div>
+        <button
+          type="button"
+          class="sidebar-toggle"
+          :aria-expanded="!sidebarCollapsed"
+          :title="
+            sidebarCollapsed
+              ? t('layout.sidebarExpand')
+              : t('layout.sidebarCollapse')
+          "
+          :aria-label="
+            sidebarCollapsed
+              ? t('layout.sidebarExpand')
+              : t('layout.sidebarCollapse')
+          "
+          @click="toggleSidebar"
+        >
+          <span class="sidebar-toggle-icon" aria-hidden="true">{{
+            sidebarCollapsed ? '›' : '‹'
+          }}</span>
+        </button>
       </div>
 
       <nav class="nav">
@@ -69,17 +115,18 @@ async function onLogout() {
           :to="item.to"
           class="nav-link"
           :class="navClass(item.to)"
+          :title="item.label"
         >
           <span class="nav-icon">{{ item.icon }}</span>
-          {{ item.label }}
+          <span class="nav-label">{{ item.label }}</span>
         </RouterLink>
       </nav>
 
-      <p class="sidebar-disclaimer">
+      <p v-show="!sidebarCollapsed" class="sidebar-disclaimer">
         {{ t('layout.disclaimer') }}
       </p>
 
-      <div class="storage-hint">
+      <div v-show="!sidebarCollapsed" class="storage-hint">
         <div class="storage-label">{{ t('layout.storagePlanned') }}</div>
         <div class="storage-bar"><span style="width: 35%" /></div>
         <div class="storage-meta">{{ t('layout.storageHint') }}</div>
@@ -107,8 +154,8 @@ async function onLogout() {
 
 <style scoped>
 .shell {
-  display: grid;
-  grid-template-columns: 252px 1fr;
+  display: flex;
+  width: 100%;
   min-height: 100vh;
   background: var(--cs-bg);
   color: var(--cs-text);
@@ -118,16 +165,87 @@ async function onLogout() {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  width: 252px;
+  flex-shrink: 0;
+  box-sizing: border-box;
   padding: 1.25rem 1rem;
   background: linear-gradient(180deg, #101821 0%, #0c1218 100%);
   border-right: 1px solid var(--cs-border);
+  transition:
+    width 0.22s ease,
+    padding 0.22s ease;
+}
+
+.shell--collapsed .sidebar {
+  width: 72px;
+  padding: 1.25rem 0.5rem;
+  align-items: stretch;
 }
 
 .brand {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.35rem 0;
+}
+
+.brand-lockup {
+  display: flex;
   gap: 0.75rem;
   align-items: center;
-  padding: 0.35rem 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.shell--collapsed .brand-lockup {
+  justify-content: center;
+  flex: 0;
+}
+
+.brand-text {
+  min-width: 0;
+}
+
+.sidebar-toggle {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 4px 0 0;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--cs-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--cs-muted);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cs-text);
+  border-color: rgba(62, 207, 142, 0.35);
+}
+
+.sidebar-toggle-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.shell--collapsed .brand {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.shell--collapsed .sidebar-toggle {
+  margin: 0;
 }
 
 .brand-mark {
@@ -160,6 +278,7 @@ async function onLogout() {
 }
 
 .nav-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -171,6 +290,24 @@ async function onLogout() {
   transition:
     background 0.15s,
     color 0.15s;
+}
+
+.shell--collapsed .nav-link {
+  justify-content: center;
+  padding: 0.55rem 0.45rem;
+  gap: 0;
+}
+
+.shell--collapsed .nav-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .nav-link:hover {
@@ -188,6 +325,11 @@ async function onLogout() {
   width: 1.25rem;
   text-align: center;
   opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  min-width: 0;
 }
 
 .sidebar-disclaimer {
@@ -234,6 +376,7 @@ async function onLogout() {
 }
 
 .main {
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
