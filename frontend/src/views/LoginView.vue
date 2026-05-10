@@ -1,29 +1,112 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import axios from 'axios';
+import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
+import * as authApi from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 
+const { t, locale } = useI18n();
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 
 const email = ref('');
 const password = ref('');
+const captchaId = ref<string | null>(null);
+const captchaCode = ref('');
+const captchaSvg = ref('');
+const captchaLoading = ref(false);
 const loading = ref(false);
 const errorMsg = ref('');
 
+const captchaImgSrc = computed(() =>
+  captchaSvg.value
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(captchaSvg.value)}`
+    : '',
+);
+
+/** Normalize known backend zh messages to current UI language */
+function localizeAuthMessage(raw: string): string {
+  const s = raw.trim();
+  if (s === '用户名或密码错误') return t('auth.invalidLoginFallback');
+  if (s === '验证码错误或已过期，请重试')
+    return locale.value === 'en-US'
+      ? 'Incorrect or expired verification code. Please try again.'
+      : s;
+  if (s === '验证码服务不可用，请确认 Redis')
+    return locale.value === 'en-US'
+      ? 'Captcha service unavailable. Check Redis.'
+      : s;
+  return s;
+}
+
+function extractApiErrorMessage(e: unknown): string | null {
+  if (!axios.isAxiosError(e)) return null;
+  const raw = e.response?.data as { message?: string | string[] };
+  const m = raw?.message;
+  if (typeof m === 'string' && m.trim())
+    return localizeAuthMessage(m.trim());
+  if (Array.isArray(m) && m.length)
+    return m
+      .filter((x) => typeof x === 'string' && x.trim())
+      .map((x) => localizeAuthMessage(x))
+      .join(locale.value === 'en-US' ? '; ' : '；');
+  return null;
+}
+
+async function loadCaptcha() {
+  captchaLoading.value = true;
+  captchaCode.value = '';
+  try {
+    const data = await authApi.fetchLoginCaptcha();
+    captchaId.value = data.captchaId;
+    captchaSvg.value = data.svg;
+  } catch (e) {
+    captchaId.value = null;
+    captchaSvg.value = '';
+    errorMsg.value = extractApiErrorMessage(e) ?? t('auth.captchaLoadFallback');
+  } finally {
+    captchaLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  void loadCaptcha();
+});
+
 async function submit() {
   errorMsg.value = '';
+  if (!captchaId.value) {
+    errorMsg.value = t('auth.needCaptchaFirst');
+    void loadCaptcha();
+    return;
+  }
   loading.value = true;
   try {
-    await auth.login(email.value.trim(), password.value);
+    await auth.login(
+      email.value.trim(),
+      password.value,
+      captchaId.value,
+      captchaCode.value.trim(),
+    );
     const redirect = route.query.redirect as string | undefined;
     router.push(redirect && redirect.startsWith('/') ? redirect : '/');
   } catch (e: unknown) {
-    errorMsg.value =
-      e && typeof e === 'object' && 'response' in e
-        ? '登录未成功，请确认邮箱与密码是否正确'
-        : '网络异常，请稍后再试';
+    void loadCaptcha();
+    if (axios.isAxiosError(e)) {
+      const m = extractApiErrorMessage(e);
+      if (m) {
+        errorMsg.value = m;
+      } else if (e.response?.status === 401) {
+        errorMsg.value = t('auth.invalidLoginFallback');
+      } else {
+        errorMsg.value = t('errors.networkError');
+      }
+    } else {
+      errorMsg.value = t('errors.networkError');
+    }
   } finally {
     loading.value = false;
   }
@@ -32,20 +115,23 @@ async function submit() {
 
 <template>
   <div class="auth-page">
+    <div class="auth-bar">
+      <LanguageSwitcher />
+    </div>
     <div class="card">
       <div class="hero">
         <div class="logo">▶</div>
-        <h1>CodecSiphon</h1>
-        <p class="tag">登录后即可新建下载、查看进度与管理文件</p>
+        <h1>{{ t('layout.brandTitle') }}</h1>
+        <p class="tag">{{ t('auth.loginTagline') }}</p>
       </div>
 
       <form class="form" @submit.prevent="submit">
         <label class="field">
-          <span>邮箱</span>
+          <span>{{ t('auth.email') }}</span>
           <input v-model="email" type="email" required autocomplete="username" />
         </label>
         <label class="field">
-          <span>密码</span>
+          <span>{{ t('auth.password') }}</span>
           <input
             v-model="password"
             type="password"
@@ -55,15 +141,53 @@ async function submit() {
           />
         </label>
 
+        <div class="field captcha-row">
+          <span>{{ t('auth.captcha') }}</span>
+          <div class="captcha-line">
+            <input
+              v-model="captchaCode"
+              type="text"
+              class="captcha-input"
+              required
+              autocomplete="off"
+              maxlength="12"
+              :placeholder="t('auth.captchaPlaceholder')"
+              :disabled="captchaLoading || !captchaId"
+            />
+            <div class="captcha-img-wrap">
+              <img
+                v-if="captchaImgSrc"
+                :src="captchaImgSrc"
+                :alt="t('auth.captchaAlt')"
+                class="captcha-img"
+                width="140"
+                height="44"
+              />
+              <span v-else class="captcha-placeholder">{{
+                captchaLoading ? t('auth.captchaLoading') : t('auth.captchaNotLoaded')
+              }}</span>
+            </div>
+            <button
+              type="button"
+              class="btn-refresh"
+              :disabled="captchaLoading"
+              :title="t('auth.refreshCaptchaTitle')"
+              @click="loadCaptcha"
+            >
+              {{ t('auth.refreshCaptcha') }}
+            </button>
+          </div>
+        </div>
+
         <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
 
         <button class="btn primary" type="submit" :disabled="loading">
-          {{ loading ? '登录中…' : '登录' }}
+          {{ loading ? t('auth.loggingIn') : t('auth.login') }}
         </button>
 
         <div class="footer">
-          <span>还没有账户？</span>
-          <RouterLink to="/register">注册</RouterLink>
+          <span>{{ t('auth.noAccount') }}</span>
+          <RouterLink to="/register">{{ t('auth.registerLink') }}</RouterLink>
         </div>
       </form>
     </div>
@@ -76,10 +200,17 @@ async function submit() {
   display: grid;
   place-items: center;
   padding: 2rem 1rem;
+  position: relative;
   background:
     radial-gradient(900px 400px at 10% 10%, rgba(62, 207, 142, 0.14), transparent),
     radial-gradient(700px 500px at 90% 30%, rgba(91, 224, 255, 0.12), transparent),
     var(--cs-bg);
+}
+
+.auth-bar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
 }
 
 .card {
@@ -111,7 +242,9 @@ async function submit() {
 
 h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  font-weight: 700;
 }
 
 .tag {
@@ -146,6 +279,72 @@ h1 {
 .field input:focus {
   border-color: rgba(62, 207, 142, 0.55);
   box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.12);
+}
+
+.captcha-row .captcha-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.captcha-input {
+  flex: 1;
+  min-width: 7rem;
+  border-radius: 12px;
+  border: 1px solid var(--cs-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cs-text);
+  padding: 0.65rem 0.75rem;
+  outline: none;
+}
+
+.captcha-input:focus {
+  border-color: rgba(62, 207, 142, 0.55);
+  box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.12);
+}
+
+.captcha-img-wrap {
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--cs-border);
+  background: #0d141c;
+}
+
+.captcha-img {
+  display: block;
+  vertical-align: middle;
+}
+
+.captcha-placeholder {
+  display: grid;
+  place-items: center;
+  width: 140px;
+  height: 44px;
+  font-size: 0.75rem;
+  color: var(--cs-muted);
+}
+
+.btn-refresh {
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 1px solid var(--cs-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--cs-muted);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  border-color: rgba(62, 207, 142, 0.45);
+  color: var(--cs-accent);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btn.primary {

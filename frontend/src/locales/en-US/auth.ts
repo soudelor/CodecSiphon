@@ -1,0 +1,36 @@
+export default {
+  loginTagline:
+    'Sign in to create downloads, track progress, and manage files.',
+  email: 'Email',
+  password: 'Password',
+  captcha: 'Verification',
+  captchaPlaceholder: 'Enter the characters shown',
+  captchaAlt: 'Captcha',
+  captchaLoading: 'Loading…',
+  captchaNotLoaded: 'Not loaded',
+  refreshCaptcha: 'New image',
+  refreshCaptchaTitle: 'Refresh captcha',
+  needCaptchaFirst: 'Please load the captcha first.',
+  loggingIn: 'Signing in…',
+  login: 'Sign in',
+  noAccount: 'No account yet?',
+  registerLink: 'Register',
+  captchaLoadFallback:
+    'Could not load captcha. Ensure the API and Redis are running, then refresh.',
+  invalidLoginFallback: 'Incorrect username or password.',
+  createAccount: 'Create account',
+  registerTagline:
+    'Register to add download tasks and manage saved files.',
+  nicknameLabel: 'Display name (optional, shown in the header)',
+  passwordHint: 'Password (min. 8 characters)',
+  confirmPassword: 'Confirm password',
+  pwdMismatchHint: 'Passwords do not match. Please check and try again.',
+  pwdMismatchSubmit: 'Passwords do not match. Please fix and submit again.',
+  pwdTooShort: 'Password must be at least 8 characters.',
+  submitting: 'Submitting…',
+  register: 'Register',
+  hasAccount: 'Already have an account?',
+  backToLogin: 'Back to sign in',
+  registerFailed:
+    'Registration failed. The email may already exist, or the network is unstable.',
+} as const;

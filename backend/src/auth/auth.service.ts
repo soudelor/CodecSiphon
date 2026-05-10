@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -11,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { JwtAccessPayload } from './strategies/jwt.strategy';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { CaptchaService } from './captcha.service';
 
 const BCRYPT_ROUNDS = 10;
 const REFRESH_TOKEN_BYTES = 32;
@@ -24,6 +26,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly captcha: CaptchaService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -49,16 +52,24 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    const captchaOk = await this.captcha.verifyAndConsume(
+      dto.captchaId,
+      dto.captchaCode,
+    );
+    if (!captchaOk) {
+      throw new BadRequestException('验证码错误或已过期，请重试');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('用户名或密码错误');
     }
 
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('用户名或密码错误');
     }
 
     return this.buildAuthResponse(user);

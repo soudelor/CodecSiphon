@@ -1,24 +1,27 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter, RouterLink, RouterView } from 'vue-router';
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import { useAuthStore } from '@/stores/auth';
 
+const { t } = useI18n();
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 
 const displayName = computed(
-  () => auth.user?.displayName || auth.user?.email || '用户',
+  () => auth.user?.displayName || auth.user?.email || t('common.user'),
 );
 
-const nav = [
-  { to: '/', label: '仪表盘', icon: '◆' },
-  { to: '/tasks/new', label: '新建任务', icon: '⬇' },
-  { to: '/tasks', label: '任务管理', icon: '☰' },
-  { to: '/files', label: '文件管理', icon: '▣' },
-  { to: '/settings', label: '设置', icon: '⚙' },
-  { to: '/help', label: '帮助', icon: '?' },
-];
+const nav = computed(() => [
+  { to: '/', label: t('layout.navDashboard'), icon: '◆' },
+  { to: '/tasks/new', label: t('layout.navNewTask'), icon: '⬇' },
+  { to: '/tasks', label: t('layout.navTasks'), icon: '☰' },
+  { to: '/files', label: t('layout.navFiles'), icon: '▣' },
+  { to: '/settings', label: t('layout.navSettings'), icon: '⚙' },
+  { to: '/help', label: t('layout.navHelp'), icon: '?' },
+]);
 
 function navClass(path: string) {
   let active = false;
@@ -28,18 +31,18 @@ function navClass(path: string) {
   return { active };
 }
 
-const titleMap: Record<string, string> = {
-  dashboard: '仪表盘',
-  'task-new': '新建任务',
-  tasks: '任务管理',
-  files: '文件管理',
-  settings: '设置',
-  help: '帮助',
-};
+const titleMap = computed<Record<string, string>>(() => ({
+  dashboard: t('layout.titleDashboard'),
+  'task-new': t('layout.titleTaskNew'),
+  tasks: t('layout.titleTasks'),
+  files: t('layout.titleFiles'),
+  settings: t('layout.titleSettings'),
+  help: t('layout.titleHelp'),
+}));
 
 const topTitle = computed(() => {
   const key = route.name?.toString();
-  return (key && titleMap[key]) || '工作台';
+  return (key && titleMap.value[key]) || t('common.workspace');
 });
 
 async function onLogout() {
@@ -54,8 +57,8 @@ async function onLogout() {
       <div class="brand">
         <span class="brand-mark">▶</span>
         <div>
-          <div class="brand-title">CodecSiphon</div>
-          <div class="brand-sub">视频下载控制台</div>
+          <div class="brand-title">{{ t('layout.brandTitle') }}</div>
+          <div class="brand-sub">{{ t('layout.brandSub') }}</div>
         </div>
       </div>
 
@@ -73,13 +76,13 @@ async function onLogout() {
       </nav>
 
       <p class="sidebar-disclaimer">
-        本应用及相关资源仅供个人学习研究使用，禁止任何商业用途。请勿用于商用、二次售卖及盈利行为，违规使用后果由使用者自行承担。
+        {{ t('layout.disclaimer') }}
       </p>
 
       <div class="storage-hint">
-        <div class="storage-label">存储（规划中）</div>
+        <div class="storage-label">{{ t('layout.storagePlanned') }}</div>
         <div class="storage-bar"><span style="width: 35%" /></div>
-        <div class="storage-meta">此处将显示您的存储空间使用情况（即将推出）</div>
+        <div class="storage-meta">{{ t('layout.storageHint') }}</div>
       </div>
     </aside>
 
@@ -87,8 +90,11 @@ async function onLogout() {
       <header class="topbar">
         <div class="topbar-title">{{ topTitle }}</div>
         <div class="topbar-actions">
+          <LanguageSwitcher />
           <span class="who">{{ displayName }}</span>
-          <button type="button" class="btn ghost" @click="onLogout">登出</button>
+          <button type="button" class="btn ghost" @click="onLogout">
+            {{ t('layout.logout') }}
+          </button>
         </div>
       </header>
 
@@ -138,6 +144,8 @@ async function onLogout() {
 .brand-title {
   font-weight: 700;
   letter-spacing: 0.02em;
+  font-size: 0.92rem;
+  line-height: 1.35;
 }
 
 .brand-sub {

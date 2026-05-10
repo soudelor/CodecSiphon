@@ -1,24 +1,31 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import * as tasksApi from '@/api/tasks';
 import type { DownloadTask, TaskStatus } from '@/types/models';
+import { useTaskLabels } from '@/composables/useTaskLabels';
 import {
   canCancelTask,
   canPauseTask,
   canResumeTask,
   canRetryTask,
 } from '@/utils/taskActions';
-import { taskStatusLabel, sourceTypeLabel } from '@/views/taskLabels';
 
+const { t } = useI18n();
+const { sourceTypeLabel, taskStatusLabel } = useTaskLabels();
 const auth = useAuthStore();
 const recent = ref<DownloadTask[]>([]);
 const loading = ref(true);
 const loadError = ref('');
 const busyId = ref<string | null>(null);
 const actionError = ref('');
+
+const welcomeName = computed(
+  () => auth.user?.displayName || auth.user?.email || t('common.user'),
+);
 
 async function loadRecent() {
   loading.value = true;
@@ -27,7 +34,7 @@ async function loadRecent() {
     const data = await tasksApi.listTasks(1, 6);
     recent.value = data.items;
   } catch {
-    loadError.value = '无法加载最近任务，请检查网络后重试';
+    loadError.value = t('dashboard.loadRecentFailed');
   } finally {
     loading.value = false;
   }
@@ -42,7 +49,7 @@ function apiErrorMessage(err: unknown): string {
     if (Array.isArray(m)) return m.join('；');
     if (typeof m === 'string') return m;
   }
-  return '操作失败';
+  return t('errors.operationFailed');
 }
 
 async function setStatus(id: string, status: TaskStatus) {
@@ -59,19 +66,25 @@ async function setStatus(id: string, status: TaskStatus) {
   }
 }
 
-async function removeTask(t: DownloadTask) {
-  const label = t.title || t.sourceUrl || t.sourceUrls[0] || t.id.slice(0, 8);
+async function removeTask(tTask: DownloadTask) {
+  const label =
+    tTask.title ||
+    tTask.sourceUrl ||
+    tTask.sourceUrls[0] ||
+    tTask.id.slice(0, 8);
   if (
     !confirm(
-      `确定删除此任务？\n「${label}」\n\n将取消未开始的下载，并删除已下载文件夹及文件库里的对应记录（不可恢复）。`,
+      t('dashboard.deleteTaskConfirmDash', {
+        label,
+      }),
     )
   ) {
     return;
   }
-  busyId.value = t.id;
+  busyId.value = tTask.id;
   actionError.value = '';
   try {
-    await tasksApi.deleteTask(t.id);
+    await tasksApi.deleteTask(tTask.id);
     await loadRecent();
   } catch (e) {
     actionError.value = apiErrorMessage(e);
@@ -86,105 +99,120 @@ async function removeTask(t: DownloadTask) {
     <section class="welcome card">
       <div>
         <h2>
-          欢迎回来，{{ auth.user?.displayName || auth.user?.email || '用户' }}
+          {{ t('dashboard.welcomeBack', { name: welcomeName }) }}
         </h2>
         <p class="muted">
-          在左侧点「新建任务」添加下载，或到「任务管理」查看全部进度与历史。
+          {{ t('dashboard.intro') }}
         </p>
       </div>
       <div class="quick">
-        <RouterLink class="btn primary" to="/tasks/new">新建下载任务</RouterLink>
-        <RouterLink class="btn ghost" to="/tasks">任务管理</RouterLink>
+        <RouterLink class="btn primary" to="/tasks/new">{{
+          t('dashboard.newDownloadTask')
+        }}</RouterLink>
+        <RouterLink class="btn ghost" to="/tasks">{{
+          t('dashboard.manageTasks')
+        }}</RouterLink>
       </div>
     </section>
 
     <section class="grid">
       <div class="card">
-        <h3>系统状态</h3>
+        <h3>{{ t('dashboard.systemStatus') }}</h3>
         <p class="muted small">
-          提交任务后会自动排队下载，无需您手动再点执行。服务异常时新建或继续任务可能失败，可稍后再试或联系管理员。
+          {{ t('dashboard.systemStatusHint') }}
         </p>
         <ul class="stats">
-          <li><span>连接状态</span><strong>已就绪</strong></li>
-          <li><span>保存位置</span><strong>当前账号下载目录</strong></li>
-          <li><span>网盘同步</span><strong>尚未开放</strong></li>
+          <li>
+            <span>{{ t('dashboard.connStatus') }}</span
+            ><strong>{{ t('dashboard.connReady') }}</strong>
+          </li>
+          <li>
+            <span>{{ t('dashboard.saveLocation') }}</span
+            ><strong>{{ t('dashboard.saveLocationValue') }}</strong>
+          </li>
+          <li>
+            <span>{{ t('dashboard.cloudSync') }}</span
+            ><strong>{{ t('dashboard.cloudSyncNA') }}</strong>
+          </li>
         </ul>
       </div>
 
       <div class="card stretch">
         <div class="card-head">
-          <h3>最近任务</h3>
-          <RouterLink to="/tasks" class="link">查看全部</RouterLink>
+          <h3>{{ t('dashboard.recentTasks') }}</h3>
+          <RouterLink to="/tasks" class="link">{{ t('common.viewAll') }}</RouterLink>
         </div>
 
-        <p v-if="loading" class="muted">加载中…</p>
+        <p v-if="loading" class="muted">{{ t('common.loading') }}</p>
         <p v-else-if="loadError" class="error">{{ loadError }}</p>
         <template v-else>
           <p v-if="actionError" class="error small">{{ actionError }}</p>
-          <div v-if="recent.length === 0" class="muted">暂无任务，去新建一个吧。</div>
+          <div v-if="recent.length === 0" class="muted">
+            {{ t('dashboard.noTasksYet') }}
+          </div>
           <table v-else class="table">
-          <thead>
-            <tr>
-              <th>标题 / URL</th>
-              <th>类型</th>
-              <th>状态</th>
-              <th>进度</th>
-              <th class="col-mini">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="t in recent" :key="t.id">
-              <td class="ellipsis">
-                {{ t.title || t.sourceUrl || (t.sourceUrls[0] ?? '—') }}
-              </td>
-              <td>{{ sourceTypeLabel(t.sourceType) }}</td>
-              <td>{{ taskStatusLabel(t.status) }}</td>
-              <td>{{ t.progressPercent }}%</td>
-              <td class="dash-actions">
-                <button
-                  type="button"
-                  class="link-btn"
-                  :disabled="busyId === t.id || !canPauseTask(t)"
-                  @click="setStatus(t.id, 'paused')"
-                >
-                  暂停
-                </button>
-                <button
-                  type="button"
-                  class="link-btn"
-                  :disabled="busyId === t.id || !canResumeTask(t)"
-                  @click="setStatus(t.id, 'queued')"
-                >
-                  继续
-                </button>
-                <button
-                  type="button"
-                  class="link-btn"
-                  :disabled="busyId === t.id || !canRetryTask(t)"
-                  @click="setStatus(t.id, 'queued')"
-                >
-                  重试
-                </button>
-                <button
-                  type="button"
-                  class="link-btn danger"
-                  :disabled="busyId === t.id || !canCancelTask(t)"
-                  @click="setStatus(t.id, 'cancelled')"
-                >
-                  取消
-                </button>
-                <button
-                  type="button"
-                  class="link-btn del"
-                  :disabled="busyId === t.id"
-                  @click="removeTask(t)"
-                >
-                  删除
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            <thead>
+              <tr>
+                <th>{{ t('dashboard.colTitleUrl') }}</th>
+                <th>{{ t('dashboard.colType') }}</th>
+                <th>{{ t('dashboard.colStatus') }}</th>
+                <th>{{ t('dashboard.colProgress') }}</th>
+                <th class="col-mini">{{ t('dashboard.colActions') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="trow in recent" :key="trow.id">
+                <td class="ellipsis">
+                  {{ trow.title || trow.sourceUrl || (trow.sourceUrls[0] ?? t('common.dash')) }}
+                </td>
+                <td>{{ sourceTypeLabel(trow.sourceType) }}</td>
+                <td>{{ taskStatusLabel(trow.status) }}</td>
+                <td>{{ trow.progressPercent }}%</td>
+                <td class="dash-actions">
+                  <button
+                    type="button"
+                    class="link-btn"
+                    :disabled="busyId === trow.id || !canPauseTask(trow)"
+                    @click="setStatus(trow.id, 'paused')"
+                  >
+                    {{ t('dashboard.pause') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="link-btn"
+                    :disabled="busyId === trow.id || !canResumeTask(trow)"
+                    @click="setStatus(trow.id, 'queued')"
+                  >
+                    {{ t('dashboard.resume') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="link-btn"
+                    :disabled="busyId === trow.id || !canRetryTask(trow)"
+                    @click="setStatus(trow.id, 'queued')"
+                  >
+                    {{ t('dashboard.retry') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="link-btn danger"
+                    :disabled="busyId === trow.id || !canCancelTask(trow)"
+                    @click="setStatus(trow.id, 'cancelled')"
+                  >
+                    {{ t('dashboard.cancel') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="link-btn del"
+                    :disabled="busyId === trow.id"
+                    @click="removeTask(trow)"
+                  >
+                    {{ t('dashboard.delete') }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </template>
       </div>
     </section>

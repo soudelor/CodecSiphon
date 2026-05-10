@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import type { TaskPreviewResult } from '@/types/models';
 import * as settingsApi from '@/api/settings';
 import * as tasksApi from '@/api/tasks';
 
 const router = useRouter();
+const { t } = useI18n();
 
 /** 主流程：单视频分步向导 | 批量/播放列表（对齐 function&UI.md §2.3） */
 const mainTab = ref<'single' | 'batch'>('single');
@@ -34,7 +36,7 @@ const multiUrlMax = ref(5);
 const taskTitle = ref('');
 const platform = ref('');
 
-/** 视频质量：对应 yt-dlp -f */
+/** 视频质量 / 下载格式选择 */
 const qualityPreset = ref<'auto' | '2160' | '1080' | '720' | '480' | 'audio'>(
   'auto',
 );
@@ -148,14 +150,14 @@ function apiErr(e: unknown): string {
   const m = r;
   if (Array.isArray(m)) return m.join('；');
   if (typeof m === 'string') return m;
-  return '操作失败';
+  return t('taskCreate.operationFailed');
 }
 
 async function runDetectSingle() {
   previewError.value = '';
   const u = singleUrl.value.trim();
   if (!u) {
-    previewError.value = '请先填写链接';
+    previewError.value = t('taskCreate.fillUrlFirst');
     return;
   }
   previewLoading.value = true;
@@ -178,10 +180,10 @@ async function runDetectSingle() {
 async function pasteFromClipboard() {
   previewError.value = '';
   try {
-    const t = await navigator.clipboard.readText();
-    if (t?.trim()) singleUrl.value = t.trim();
+    const clipText = await navigator.clipboard.readText();
+    if (clipText?.trim()) singleUrl.value = clipText.trim();
   } catch {
-    previewError.value = '无法读取剪贴板（需页面焦点与浏览器权限）';
+    previewError.value = t('taskCreate.clipboardDenied');
   }
 }
 
@@ -206,7 +208,7 @@ function onImportFile(e: Event) {
 async function loadPlaylistEntries() {
   const u = playlistUrl.value.trim();
   if (!u) {
-    previewError.value = '请填写播放列表 URL';
+    previewError.value = t('taskCreate.fillPlaylistUrl');
     return;
   }
   playlistPreviewLoading.value = true;
@@ -253,14 +255,17 @@ function playlistInvert() {
 const batchPlaylistSummary = computed(() => {
   if (playlistPreview.value?.kind !== 'playlist') return '';
   const n = selectedIndices.value.length;
-  return `已选 ${n} / ${playlistPreview.value.entries.length} 条`;
+  return t('taskCreate.batchSelected', {
+    n,
+    total: playlistPreview.value.entries.length,
+  });
 });
 
 async function submit() {
   errorMsg.value = '';
   const titleTrimmed = taskTitle.value.trim();
   if (!titleTrimmed) {
-    errorMsg.value = '请填写任务标题';
+    errorMsg.value = t('taskCreate.fillTitle');
     if (mainTab.value === 'single' && singleStep.value !== 3) {
       singleStep.value = 3;
     }
@@ -271,7 +276,7 @@ async function submit() {
     const opts = buildDownloadOptions();
     if (mainTab.value === 'single') {
       const url = singleUrl.value.trim();
-      if (!url) throw new Error('请填写视频链接');
+      if (!url) throw new Error(t('taskCreate.fillVideoUrl'));
       if (preview.value?.kind === 'playlist') {
         await tasksApi.createTask({
           sourceType: 'playlist',
@@ -291,10 +296,11 @@ async function submit() {
       }
     } else {
       if (batchMode.value === 'multi') {
-        if (multiUrls.value.length === 0) throw new Error('请填写至少一行 URL');
+        if (multiUrls.value.length === 0)
+          throw new Error(t('taskCreate.fillOneUrl'));
         if (multiUrls.value.length > multiUrlMax.value) {
           throw new Error(
-            `批量链接最多 ${multiUrlMax.value} 条，请删去多余行后再提交`,
+            t('taskCreate.multiUrlLimit', { max: multiUrlMax.value }),
           );
         }
         await tasksApi.createTask({
@@ -306,7 +312,7 @@ async function submit() {
         });
       } else if (batchMode.value === 'playlist') {
         const pu = playlistUrl.value.trim();
-        if (!pu) throw new Error('请填写播放列表链接');
+        if (!pu) throw new Error(t('taskCreate.fillPlaylistLink'));
         const o = { ...opts } as Record<string, unknown>;
         const pi = buildPlaylistItemsOption();
         if (pi) o.playlist_items = pi;
@@ -328,7 +334,7 @@ async function submit() {
 }
 
 function formatEntryDur(sec: number | null): string {
-  if (sec == null || !Number.isFinite(sec)) return '—';
+  if (sec == null || !Number.isFinite(sec)) return t('common.dash');
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
@@ -339,9 +345,9 @@ function formatEntryDur(sec: number | null): string {
   <div class="page">
     <header class="head">
       <div>
-        <h2>新建下载任务</h2>
+        <h2>{{ t('taskCreate.title') }}</h2>
         <p class="muted">
-          填写任务标题（必填）；可先粘贴链接并检测信息，再选画质与格式后提交；也可切换到「批量」处理列表或多条链接。若识别失败，请确认该地址在浏览器中能正常打开。
+          {{ t('taskCreate.intro') }}
         </p>
       </div>
     </header>
@@ -352,14 +358,14 @@ function formatEntryDur(sec: number | null): string {
         :class="['tab', mainTab === 'single' && 'active']"
         @click="mainTab = 'single'"
       >
-        单视频（分步）
+        {{ t('taskCreate.tabSingle') }}
       </button>
       <button
         type="button"
         :class="['tab', mainTab === 'batch' && 'active']"
         @click="mainTab = 'batch'"
       >
-        批量 / 播放列表
+        {{ t('taskCreate.tabBatch') }}
       </button>
     </div>
 
@@ -374,17 +380,17 @@ function formatEntryDur(sec: number | null): string {
     <!-- ——— 单视频向导 ——— -->
     <div v-if="mainTab === 'single'" class="card">
       <div class="steps">
-        <span :class="['dot', singleStep >= 1 && 'on']">1 链接</span>
+        <span :class="['dot', singleStep >= 1 && 'on']">{{ t('taskCreate.step1Label') }}</span>
         <span class="sep">→</span>
-        <span :class="['dot', singleStep >= 2 && 'on']">2 信息</span>
+        <span :class="['dot', singleStep >= 2 && 'on']">{{ t('taskCreate.step2Label') }}</span>
         <span class="sep">→</span>
-        <span :class="['dot', singleStep >= 3 && 'on']">3 下载设置</span>
+        <span :class="['dot', singleStep >= 3 && 'on']">{{ t('taskCreate.step3Label') }}</span>
       </div>
 
       <template v-if="singleStep === 1">
-        <h3 class="h3">步骤 1：输入视频链接</h3>
+        <h3 class="h3">{{ t('taskCreate.step1Title') }}</h3>
         <div class="field">
-          <label for="su">视频 / 播放列表 URL</label>
+          <label for="su">{{ t('taskCreate.urlLabel') }}</label>
           <input
             id="su"
             v-model="singleUrl"
@@ -400,21 +406,21 @@ function formatEntryDur(sec: number | null): string {
             :disabled="previewLoading"
             @click="runDetectSingle"
           >
-            {{ previewLoading ? '检测中…' : '🔍 检测链接' }}
+            {{ previewLoading ? t('taskCreate.detecting') : t('taskCreate.detectLink') }}
           </button>
           <button type="button" class="btn ghost" @click="pasteFromClipboard">
-            📋 从剪贴板粘贴
+            {{ t('taskCreate.pasteClipboard') }}
           </button>
           <button type="button" class="btn ghost" @click="triggerImportFile">
-            📁 导入文本文件
+            {{ t('taskCreate.importTextFile') }}
           </button>
         </div>
         <p v-if="previewError" class="error">{{ previewError }}</p>
-        <p class="hint">请先点击「检测链接」，确认信息无误后再进入第 2 步。</p>
+        <p class="hint">{{ t('taskCreate.step1Hint') }}</p>
       </template>
 
       <template v-else-if="singleStep === 2">
-        <h3 class="h3">步骤 2：确认视频信息</h3>
+        <h3 class="h3">{{ t('taskCreate.step2Title') }}</h3>
         <template v-if="preview?.kind === 'video'">
           <div class="info-card">
             <img
@@ -425,11 +431,11 @@ function formatEntryDur(sec: number | null): string {
             />
             <div class="info-main">
               <p class="info-title">
-                {{ preview.title || '（无标题）' }}
+                {{ preview.title || t('common.none') }}
               </p>
               <p class="info-meta">
-                <span v-if="preview.durationLabel">时长：{{ preview.durationLabel }}</span>
-                <span v-if="preview.uploader"> · 作者：{{ preview.uploader }}</span>
+                <span v-if="preview.durationLabel">{{ t('taskCreate.duration') }}{{ preview.durationLabel }}</span>
+                <span v-if="preview.uploader">{{ t('taskCreate.uploader') }}{{ preview.uploader }}</span>
               </p>
               <p v-if="preview.webpageUrl" class="info-sub mono">
                 {{ preview.webpageUrl }}
@@ -439,9 +445,9 @@ function formatEntryDur(sec: number | null): string {
         </template>
         <template v-else-if="preview?.kind === 'playlist'">
           <div class="info-card plain">
-            <p class="info-title">检测到播放列表</p>
+            <p class="info-title">{{ t('taskCreate.playlistDetected') }}</p>
             <p class="info-meta">
-              列表中约有 {{ preview.entryCount }} 条视频 · 将按整表创建下载任务；若只想要其中一部分，请用顶部的「批量 / 播放列表」并选择范围。
+              {{ t('taskCreate.playlistHint', { count: preview.entryCount }) }}
             </p>
           </div>
         </template>
@@ -451,7 +457,7 @@ function formatEntryDur(sec: number | null): string {
             class="btn ghost"
             @click="singleStep = 1"
           >
-            ⬅ 上一步
+            {{ t('taskCreate.prevStep') }}
           </button>
           <button
             type="button"
@@ -459,69 +465,69 @@ function formatEntryDur(sec: number | null): string {
             :disabled="!preview"
             @click="singleStep = 3"
           >
-            下一步 ➡
+            {{ t('taskCreate.nextStep') }}
           </button>
         </div>
       </template>
 
       <template v-else>
-        <h3 class="h3">步骤 3：下载设置</h3>
+        <h3 class="h3">{{ t('taskCreate.step3Title') }}</h3>
         <div class="two-col">
           <fieldset class="fieldset">
-            <legend>视频质量</legend>
-            <label><input v-model="qualityPreset" type="radio" value="auto" /> 自动（推荐）</label>
-            <label><input v-model="qualityPreset" type="radio" value="2160" /> 2160p (4K)</label>
-            <label><input v-model="qualityPreset" type="radio" value="1080" /> 1080p</label>
-            <label><input v-model="qualityPreset" type="radio" value="720" /> 720p</label>
-            <label><input v-model="qualityPreset" type="radio" value="480" /> 480p</label>
-            <label><input v-model="qualityPreset" type="radio" value="audio" /> 仅音频</label>
+            <legend>{{ t('taskCreate.qualityLegend') }}</legend>
+            <label><input v-model="qualityPreset" type="radio" value="auto" /> {{ t('taskCreate.qualityAuto') }}</label>
+            <label><input v-model="qualityPreset" type="radio" value="2160" /> {{ t('taskCreate.quality2160') }}</label>
+            <label><input v-model="qualityPreset" type="radio" value="1080" /> {{ t('taskCreate.quality1080') }}</label>
+            <label><input v-model="qualityPreset" type="radio" value="720" /> {{ t('taskCreate.quality720') }}</label>
+            <label><input v-model="qualityPreset" type="radio" value="480" /> {{ t('taskCreate.quality480') }}</label>
+            <label><input v-model="qualityPreset" type="radio" value="audio" /> {{ t('taskCreate.qualityAudio') }}</label>
           </fieldset>
           <fieldset class="fieldset">
-            <legend>输出格式</legend>
-            <label><input v-model="outputFormat" type="radio" value="default" /> 默认（自动）</label>
-            <label><input v-model="outputFormat" type="radio" value="mp4" :disabled="qualityPreset === 'audio'" /> MP4</label>
-            <label><input v-model="outputFormat" type="radio" value="mkv" :disabled="qualityPreset === 'audio'" /> MKV</label>
-            <label><input v-model="outputFormat" type="radio" value="webm" :disabled="qualityPreset === 'audio'" /> WebM</label>
+            <legend>{{ t('taskCreate.formatLegend') }}</legend>
+            <label><input v-model="outputFormat" type="radio" value="default" /> {{ t('taskCreate.formatDefault') }}</label>
+            <label><input v-model="outputFormat" type="radio" value="mp4" :disabled="qualityPreset === 'audio'" /> {{ t('taskCreate.formatMp4') }}</label>
+            <label><input v-model="outputFormat" type="radio" value="mkv" :disabled="qualityPreset === 'audio'" /> {{ t('taskCreate.formatMkv') }}</label>
+            <label><input v-model="outputFormat" type="radio" value="webm" :disabled="qualityPreset === 'audio'" /> {{ t('taskCreate.formatWebm') }}</label>
           </fieldset>
         </div>
         <fieldset class="fieldset adv">
-          <legend>高级选项</legend>
+          <legend>{{ t('taskCreate.advLegend') }}</legend>
           <label>
             <input v-model="optSubs" type="checkbox" />
-            下载字幕并写入视频
+            {{ t('taskCreate.optSubs') }}
           </label>
           <div v-if="optSubs" class="field inline">
-            <label for="sl">字幕语言（多项用英文逗号隔开，如：简体、繁体、英语）</label>
-            <input id="sl" v-model="subLangsInput" placeholder="例如：中文与英语" />
+            <label for="sl">{{ t('taskCreate.subLangsLabel') }}</label>
+            <input id="sl" v-model="subLangsInput" :placeholder="t('taskCreate.subLangsPh')" />
           </div>
           <label>
             <input v-model="optMeta" type="checkbox" />
-            把标题、作者等信息写入文件
+            {{ t('taskCreate.optMeta') }}
           </label>
           <label>
             <input v-model="optThumb" type="checkbox" />
-            把封面图写入文件
+            {{ t('taskCreate.optThumb') }}
           </label>
         </fieldset>
         <div class="row">
           <div class="field grow">
-            <label for="task-title-single">任务标题（必填）</label>
+            <label for="task-title-single">{{ t('taskCreate.taskTitleLabel') }}</label>
             <input
               id="task-title-single"
               v-model="taskTitle"
               required
               maxlength="500"
-              placeholder="将显示在任务与文件列表中，可先沿用检测到的名称再修改"
+              :placeholder="t('taskCreate.taskTitlePh')"
             />
           </div>
           <div class="field grow">
-            <label>平台（可选）</label>
-            <input v-model="platform" maxlength="64" placeholder="如 YouTube、B 站（选填）" />
+            <label>{{ t('taskCreate.platformLabel') }}</label>
+            <input v-model="platform" maxlength="64" :placeholder="t('taskCreate.platformPh')" />
           </div>
         </div>
         <div class="nav-row">
           <button type="button" class="btn ghost" @click="singleStep = 2">
-            ⬅ 上一步
+            {{ t('taskCreate.prevStep') }}
           </button>
           <button
             type="button"
@@ -529,7 +535,7 @@ function formatEntryDur(sec: number | null): string {
             :disabled="submitting"
             @click="submit"
           >
-            {{ submitting ? '提交中…' : '开始下载 ➡' }}
+            {{ submitting ? t('taskCreate.submitDownloading') : t('taskCreate.startDownload') }}
           </button>
         </div>
       </template>
@@ -537,25 +543,25 @@ function formatEntryDur(sec: number | null): string {
 
     <!-- ——— 批量 / 播放列表 ——— -->
     <div v-else class="card">
-      <h3 class="h3">批量下载任务</h3>
+      <h3 class="h3">{{ t('taskCreate.batchTitle') }}</h3>
       <div class="field batch-title-field">
-        <label for="batch-title">任务标题（必填）</label>
+        <label for="batch-title">{{ t('taskCreate.batchTaskTitleLabel') }}</label>
         <input
           id="batch-title"
           v-model="taskTitle"
           required
           maxlength="500"
-          placeholder="将显示在任务与文件列表中"
+          :placeholder="t('taskCreate.batchTaskTitlePh')"
         />
       </div>
       <div class="modes-row">
-        <label><input v-model="batchMode" type="radio" value="playlist" /> 播放列表</label>
-        <label><input v-model="batchMode" type="radio" value="multi" /> 多链接</label>
+        <label><input v-model="batchMode" type="radio" value="playlist" /> {{ t('taskCreate.modePlaylist') }}</label>
+        <label><input v-model="batchMode" type="radio" value="multi" /> {{ t('taskCreate.modeMulti') }}</label>
       </div>
 
       <template v-if="batchMode === 'playlist'">
         <div class="field">
-          <label>播放列表 URL</label>
+          <label>{{ t('taskCreate.playlistUrlLabel') }}</label>
           <input v-model="playlistUrl" type="url" placeholder="https://...playlist..." />
         </div>
         <div class="btn-row">
@@ -565,16 +571,16 @@ function formatEntryDur(sec: number | null): string {
             :disabled="playlistPreviewLoading"
             @click="loadPlaylistEntries"
           >
-            {{ playlistPreviewLoading ? '加载中…' : '加载列表条目' }}
+            {{ playlistPreviewLoading ? t('taskCreate.loadingEntries') : t('taskCreate.loadEntries') }}
           </button>
         </div>
         <div class="two-col range">
           <fieldset class="fieldset">
-            <legend>下载范围</legend>
-            <label><input v-model="playlistRange" type="radio" value="all" /> 全部</label>
+            <legend>{{ t('taskCreate.rangeLegend') }}</legend>
+            <label><input v-model="playlistRange" type="radio" value="all" /> {{ t('taskCreate.rangeAll') }}</label>
             <label>
               <input v-model="playlistRange" type="radio" value="firstN" />
-              前 N 个：
+              {{ t('taskCreate.rangeFirstN') }}
               <input
                 v-model.number="playlistFirstN"
                 class="num"
@@ -584,20 +590,20 @@ function formatEntryDur(sec: number | null): string {
             </label>
             <label>
               <input v-model="playlistRange" type="radio" value="range" />
-              索引从
+              {{ t('taskCreate.rangeFromTo') }}
               <input v-model.number="playlistFrom" class="num" type="number" min="1" />
-              到
+              {{ t('taskCreate.rangeTo') }}
               <input v-model.number="playlistTo" class="num" type="number" min="1" />
             </label>
             <label>
               <input v-model="playlistRange" type="radio" value="custom" />
-              自定义（勾选下方条目）
+              {{ t('taskCreate.rangeCustom') }}
             </label>
           </fieldset>
           <fieldset class="fieldset">
-            <legend>说明</legend>
+            <legend>{{ t('taskCreate.rangeHelpLegend') }}</legend>
             <p class="hint">
-              「自定义」须先点「加载列表条目」才能勾选；「前 N 个」与「从几到几」可直接按序号限制范围。
+              {{ t('taskCreate.rangeHelp') }}
             </p>
             <p v-if="batchPlaylistSummary" class="hint ok">{{ batchPlaylistSummary }}</p>
           </fieldset>
@@ -607,9 +613,9 @@ function formatEntryDur(sec: number | null): string {
           class="entry-list"
         >
           <div class="entry-toolbar">
-            <button type="button" class="btn tiny" @click="playlistSelectAll">全选</button>
-            <button type="button" class="btn tiny" @click="playlistInvert">反选</button>
-            <button type="button" class="btn tiny" @click="playlistSelectNone">清除</button>
+            <button type="button" class="btn tiny" @click="playlistSelectAll">{{ t('taskCreate.selectAll') }}</button>
+            <button type="button" class="btn tiny" @click="playlistInvert">{{ t('taskCreate.invert') }}</button>
+            <button type="button" class="btn tiny" @click="playlistSelectNone">{{ t('taskCreate.clearSelection') }}</button>
           </div>
           <div
             v-for="e in playlistPreview.entries"
@@ -631,43 +637,43 @@ function formatEntryDur(sec: number | null): string {
 
       <template v-else-if="batchMode === 'multi'">
         <div class="field">
-          <label>每行一个 URL</label>
+          <label>{{ t('taskCreate.multiLabel') }}</label>
           <textarea
             v-model="multiText"
             rows="8"
             placeholder="https://..."
           />
           <p class="hint">
-            已输入 {{ multiUrls.length }} 条，最多 {{ multiUrlMax }} 条有效链接（空行不计）。
+            {{ t('taskCreate.multiHint', { count: multiUrls.length, max: multiUrlMax }) }}
           </p>
         </div>
       </template>
 
       <!-- 批量模式共用：下载选项 -->
       <div>
-        <h4 class="h4">下载选项</h4>
+        <h4 class="h4">{{ t('taskCreate.downloadOptions') }}</h4>
         <div class="two-col">
           <fieldset class="fieldset">
-            <legend>视频质量</legend>
-            <label><input v-model="qualityPreset" type="radio" value="auto" /> 自动</label>
-            <label><input v-model="qualityPreset" type="radio" value="1080" /> 1080p</label>
-            <label><input v-model="qualityPreset" type="radio" value="720" /> 720p</label>
-            <label><input v-model="qualityPreset" type="radio" value="audio" /> 仅音频</label>
+            <legend>{{ t('taskCreate.qualityLegend') }}</legend>
+            <label><input v-model="qualityPreset" type="radio" value="auto" /> {{ t('taskCreate.qualityAuto') }}</label>
+            <label><input v-model="qualityPreset" type="radio" value="1080" /> {{ t('taskCreate.quality1080') }}</label>
+            <label><input v-model="qualityPreset" type="radio" value="720" /> {{ t('taskCreate.quality720') }}</label>
+            <label><input v-model="qualityPreset" type="radio" value="audio" /> {{ t('taskCreate.qualityAudio') }}</label>
           </fieldset>
           <fieldset class="fieldset">
-            <legend>输出格式</legend>
-            <label><input v-model="outputFormat" type="radio" value="default" /> 默认</label>
-            <label><input v-model="outputFormat" type="radio" value="mp4" /> MP4</label>
+            <legend>{{ t('taskCreate.formatLegend') }}</legend>
+            <label><input v-model="outputFormat" type="radio" value="default" /> {{ t('taskCreate.formatDefault') }}</label>
+            <label><input v-model="outputFormat" type="radio" value="mp4" /> {{ t('taskCreate.formatMp4') }}</label>
           </fieldset>
         </div>
         <fieldset class="fieldset adv">
-          <legend>高级</legend>
-          <label><input v-model="optSubs" type="checkbox" /> 下载字幕并写入视频</label>
-          <label><input v-model="optMeta" type="checkbox" /> 把标题、作者等写入文件</label>
+          <legend>{{ t('taskCreate.advShort') }}</legend>
+          <label><input v-model="optSubs" type="checkbox" /> {{ t('taskCreate.optSubs') }}</label>
+          <label><input v-model="optMeta" type="checkbox" /> {{ t('taskCreate.optMeta') }}</label>
         </fieldset>
         <div class="row">
           <div class="field grow">
-            <label>平台（可选）</label>
+            <label>{{ t('taskCreate.platformLabel') }}</label>
             <input v-model="platform" maxlength="64" />
           </div>
         </div>
@@ -683,7 +689,7 @@ function formatEntryDur(sec: number | null): string {
           :disabled="submitting"
           @click="submit"
         >
-          {{ submitting ? '提交中…' : '开始批量下载 ➡' }}
+          {{ submitting ? t('taskCreate.submitDownloading') : t('taskCreate.batchSubmit') }}
         </button>
       </div>
     </div>

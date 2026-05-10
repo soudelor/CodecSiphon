@@ -1,15 +1,19 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
 defineProps<{
   title: string;
   description: string;
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
   <div class="placeholder card">
     <h2>{{ title }}</h2>
     <p>{{ description }}</p>
-    <p class="hint">该功能入口已预留，后续版本开放后可直接使用。</p>
+    <p class="hint">{{ t('common.placeholderHint') }}</p>
   </div>
 </template>
 

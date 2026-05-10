@@ -1,0 +1,25 @@
+export default {
+  title: 'Tasks',
+  introHtml:
+    '<strong>Pause</strong>: stops queued work; an active chunk may finish first. <strong>Resume</strong>: unpause. If a worker is already running you may see “Downloading”; otherwise “Queued”. <strong>Cancel</strong>: stop the task (completed ones cannot be cancelled). <strong>Retry</strong>: re-queue failed tasks only. <strong>Delete</strong>: removes the task, queue, downloaded folder, and related library entries.',
+  deleteConfirm:
+    'Delete this task?\n“{label}”\n\nQueued downloads will stop, and the task folder plus library entries will be removed (cannot be undone).',
+  pause: 'Pause',
+  resume: 'Resume',
+  retry: 'Retry',
+  cancel: 'Cancel',
+  delete: 'Delete',
+  loadFailed: 'Failed to load tasks',
+  colSummary: 'Summary',
+  colType: 'Type',
+  colStatus: 'Status',
+  colProgress: 'Progress',
+  colCreated: 'Created',
+  colActions: 'Actions',
+  empty: 'No tasks.',
+  pauseTitle: 'Pause download',
+  resumeTitle: 'Resume download',
+  retryTitle: 'Re-queue after failure',
+  cancelTitle: 'Cancel task',
+  deleteTitle: 'Permanently delete task and files',
+} as const;

@@ -1,9 +1,10 @@
 import {
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MediaFile } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';import { MediaFile } from '@prisma/client';
 import {
   createReadStream,
   existsSync,
@@ -39,11 +40,22 @@ function assertSafeRelativePath(relativePath: string): void {
   }
 }
 
+const MEDIA_DL_JWT_TYP = 'media_dl' as const;
+
+function sanitizeContentDispositionFileName(name: string): string {
+  return name
+    .replace(/[\u0000\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 200);
+}
+
 @Injectable()
 export class MediaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly jwt: JwtService,
   ) {}
 
   async list(userId: string, query: ListMediaQueryDto) {
@@ -83,10 +95,12 @@ export class MediaService {
 
   /**
    * 打开用户可见范围内的媒体文件流（用于下载到浏览器）。
+   * @param opts.contentDispositionFileName 覆盖响应 Content-Disposition 中的文件名（须已由调用方校验权限）
    */
   async openDownloadStream(
     userId: string,
     id: string,
+    opts?: { contentDispositionFileName?: string },
   ): Promise<{
     stream: ReadStream;
     fileName: string;
@@ -111,12 +125,75 @@ export class MediaService {
     }
 
     const st = statSync(absPath);
+    const rawOverride = opts?.contentDispositionFileName?.trim();
+    const safeOverride = rawOverride
+      ? sanitizeContentDispositionFileName(rawOverride)
+      : '';
+    const fileName =
+      safeOverride.length > 0 ? safeOverride : row.fileName;
     return {
       stream: createReadStream(absPath),
-      fileName: row.fileName,
+      fileName,
       mimeType: row.mimeType,
       size: st.size,
     };
+  }
+
+  /** 短期 JWT，供浏览器直接 GET（原生边下边存，无需整文件进 Blob） */
+  createDownloadToken(
+    userId: string,
+    mediaId: string,
+    fileName?: string,
+  ): string {
+    const fn = fileName?.trim()
+      ? sanitizeContentDispositionFileName(fileName.trim())
+      : undefined;
+    return this.jwt.sign(
+      {
+        sub: userId,
+        typ: MEDIA_DL_JWT_TYP,
+        mid: mediaId,
+        ...(fn && fn.length > 0 ? { fn } : {}),
+      },
+      { expiresIn: '10m' },
+    );
+  }
+
+  verifyMediaDownloadToken(
+    token: string,
+    mediaId: string,
+  ): { userId: string; contentDispositionFileName?: string } {
+    try {
+      const payload = this.jwt.verify<{
+        sub?: string;
+        typ?: string;
+        mid?: string;
+        fn?: string;
+      }>(token);
+      if (
+        payload.typ !== MEDIA_DL_JWT_TYP ||
+        payload.mid !== mediaId ||
+        typeof payload.sub !== 'string'
+      ) {
+        throw new UnauthorizedException('无效下载链接');
+      }
+      const contentDispositionFileName =
+        typeof payload.fn === 'string' && payload.fn.trim()
+          ? sanitizeContentDispositionFileName(payload.fn)
+          : undefined;
+      return {
+        userId: payload.sub,
+        contentDispositionFileName:
+          contentDispositionFileName && contentDispositionFileName.length > 0
+            ? contentDispositionFileName
+            : undefined,
+      };
+    } catch (e) {
+      if (e instanceof UnauthorizedException) throw e;
+      throw new UnauthorizedException(
+        '下载链接已过期或无效，请返回文件列表重新下载',
+      );
+    }
   }
 
   /**

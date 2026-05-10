@@ -1,0 +1,25 @@
+export default {
+  title: '任务管理',
+  introHtml:
+    '<strong>暂停</strong>：已排队的会停掉，当前正在下的一段会等它走完再停。<strong>继续</strong>：从暂停恢复。若 Worker 已在执行，界面会显示「下载中」；若在等待队列则为「排队中」。<strong>取消</strong>：不再继续该任务（已成功的不能撤成取消）。<strong>重试</strong>：只对失败的任务有效，会重新排队尝试。<strong>删除</strong>：任务记录、未完成的排队、已下载文件夹及文件库对应项都会删掉。',
+  deleteConfirm:
+    '确定删除此任务？\n「{label}」\n\n将取消排队中的下载，并删除该任务对应的文件夹及文件库记录（不可恢复）。',
+  pause: '暂停',
+  resume: '继续',
+  retry: '重试',
+  cancel: '取消',
+  delete: '删除',
+  loadFailed: '加载任务失败',
+  colSummary: '摘要',
+  colType: '类型',
+  colStatus: '状态',
+  colProgress: '进度',
+  colCreated: '创建时间',
+  colActions: '操作',
+  empty: '暂无任务。',
+  pauseTitle: '暂停下载',
+  resumeTitle: '继续下载',
+  retryTitle: '失败后重新入队',
+  cancelTitle: '取消任务',
+  deleteTitle: '永久删除任务及本地文件',
+} as const;

@@ -1,0 +1,17 @@
+export default {
+  loading: '加载中…',
+  user: '用户',
+  dash: '—',
+  none: '（无标题）',
+  workspace: '工作台',
+  prevPage: '上一页',
+  nextPage: '下一页',
+  perPage: '每页',
+  all: '全部',
+  viewAll: '查看全部',
+  syncListProgress: '正在同步列表进度',
+  language: '语言',
+  zhCN: '简体中文',
+  enUS: 'English',
+  placeholderHint: '该功能入口已预留，后续版本开放后可直接使用。',
+} as const;

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import * as subsApi from '@/api/subscriptions';
 import type { Subscription } from '@/types/models';
+
+const { t } = useI18n();
 
 const items = ref<Subscription[]>([]);
 const total = ref(0);
@@ -18,15 +21,17 @@ const displayName = ref('');
 const checkIntervalSec = ref(21600);
 const submitting = ref(false);
 
-function typeLabel(t: string): string {
-  if (t === 'channel') return '频道';
-  if (t === 'playlist') return '播放列表';
-  if (t === 'rss') return 'RSS';
-  return t;
+function subscriptionTypeLabel(ty: string): string {
+  if (ty === 'channel') return t('subscriptions.typeChannel');
+  if (ty === 'playlist') return t('subscriptions.typePlaylist');
+  if (ty === 'rss') return t('subscriptions.typeRss');
+  return ty;
 }
 
-function statusLabel(s: string): string {
-  return s === 'active' ? '进行中' : '已暂停';
+function subscriptionStatusLabel(s: string): string {
+  return s === 'active'
+    ? t('subscriptions.statusActive')
+    : t('subscriptions.statusPaused');
 }
 
 async function load() {
@@ -37,7 +42,7 @@ async function load() {
     items.value = data.items;
     total.value = data.total;
   } catch {
-    errorMsg.value = '订阅列表加载失败，请检查网络或稍后再试';
+    errorMsg.value = t('subscriptions.loadFailed');
   } finally {
     loading.value = false;
   }
@@ -55,7 +60,7 @@ function apiErrorMessage(err: unknown): string {
     if (Array.isArray(m)) return m.join('；');
     if (typeof m === 'string') return m;
   }
-  return '操作失败，请稍后重试';
+  return t('errors.operationFailedRetry');
 }
 
 async function createSub() {
@@ -95,11 +100,7 @@ async function toggleStatus(s: Subscription) {
 
 async function removeSub(s: Subscription) {
   const label = s.displayName || s.sourceUrl.slice(0, 48) || s.id.slice(0, 8);
-  if (
-    !confirm(
-      `确定删除「${label}」这条订阅？\n\n删除后无法再选它来新建任务；以前已经创建的任务不受影响。`,
-    )
-  ) {
+  if (!confirm(t('subscriptions.deleteConfirm', { label }))) {
     return;
   }
   busyId.value = s.id;
@@ -119,9 +120,9 @@ async function removeSub(s: Subscription) {
   <div class="page">
     <header class="head">
       <div>
-        <h2>订阅管理</h2>
+        <h2>{{ t('subscriptions.title') }}</h2>
         <p class="muted">
-          在此添加常看的频道、视频列表或订阅地址，便于以后统一下载与更新。（当前主界面已暂时收起该入口；若您仍能打开本页，说明功能保留在系统中。）
+          {{ t('subscriptions.intro') }}
         </p>
       </div>
     </header>
@@ -129,28 +130,28 @@ async function removeSub(s: Subscription) {
     <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
 
     <form class="card form" @submit.prevent="createSub">
-      <h3 class="form-title">添加一条订阅</h3>
+      <h3 class="form-title">{{ t('subscriptions.formTitle') }}</h3>
       <div class="row">
         <div class="field">
-          <label>内容类型</label>
+          <label>{{ t('subscriptions.contentType') }}</label>
           <select v-model="type">
-            <option value="channel">频道（某位作者的全部更新）</option>
-            <option value="playlist">播放列表（固定的一组视频）</option>
-            <option value="rss">订阅摘要（RSS 地址）</option>
+            <option value="channel">{{ t('subscriptions.optChannel') }}</option>
+            <option value="playlist">{{ t('subscriptions.optPlaylist') }}</option>
+            <option value="rss">{{ t('subscriptions.optRss') }}</option>
           </select>
         </div>
         <div class="field grow">
-          <label>页面链接</label>
-          <input v-model="sourceUrl" required placeholder="粘贴浏览器地址栏里的完整链接" />
+          <label>{{ t('subscriptions.pageLink') }}</label>
+          <input v-model="sourceUrl" required :placeholder="t('subscriptions.pageLinkPh')" />
         </div>
       </div>
       <div class="row">
         <div class="field grow">
-          <label>显示名称（可选，便于在列表里辨认）</label>
+          <label>{{ t('subscriptions.displayNameLabel') }}</label>
           <input v-model="displayName" maxlength="255" />
         </div>
         <div class="field">
-          <label>自动检查间隔（秒，数字越大检查越不频繁）</label>
+          <label>{{ t('subscriptions.checkInterval') }}</label>
           <input
             v-model.number="checkIntervalSec"
             type="number"
@@ -162,17 +163,17 @@ async function removeSub(s: Subscription) {
       </div>
       <div class="actions">
         <button class="btn primary" type="submit" :disabled="submitting">
-          {{ submitting ? '保存中…' : '添加订阅' }}
+          {{ submitting ? t('subscriptions.saving') : t('subscriptions.addSubmit') }}
         </button>
       </div>
     </form>
 
     <div class="card list-card">
       <div class="pager">
-        <span class="pi">共 {{ total }} 条订阅</span>
+        <span class="pi">{{ t('subscriptions.totalSubs', { n: total }) }}</span>
         <span class="spacer" />
         <label>
-          每页
+          {{ t('common.perPage') }}
           <select v-model.number="limit">
             <option :value="8">8</option>
             <option :value="12">12</option>
@@ -185,7 +186,7 @@ async function removeSub(s: Subscription) {
           :disabled="page <= 1 || loading"
           @click="page -= 1"
         >
-          上一页
+          {{ t('common.prevPage') }}
         </button>
         <span class="pi">{{ page }} / {{ totalPages() }}</span>
         <button
@@ -194,7 +195,7 @@ async function removeSub(s: Subscription) {
           :disabled="page >= totalPages() || loading"
           @click="page += 1"
         >
-          下一页
+          {{ t('common.nextPage') }}
         </button>
       </div>
 
@@ -202,25 +203,25 @@ async function removeSub(s: Subscription) {
         <table class="table">
           <thead>
             <tr>
-              <th>订阅</th>
-              <th>类型</th>
-              <th>状态</th>
-              <th>检查间隔（秒）</th>
-              <th class="col-actions">操作</th>
+              <th>{{ t('subscriptions.colSub') }}</th>
+              <th>{{ t('subscriptions.colType') }}</th>
+              <th>{{ t('subscriptions.colStatus') }}</th>
+              <th>{{ t('subscriptions.colInterval') }}</th>
+              <th class="col-actions">{{ t('subscriptions.colActions') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="s in items" :key="s.id">
               <td class="cell-main">
                 <div class="title">
-                  {{ s.displayName || '（未命名）' }}
+                  {{ s.displayName || t('subscriptions.unnamed') }}
                 </div>
                 <div class="sub break">{{ s.sourceUrl }}</div>
-                <div class="sub mono">内部编号：{{ s.id }}</div>
+                <div class="sub mono">{{ t('subscriptions.internalId', { id: s.id }) }}</div>
               </td>
-              <td>{{ typeLabel(s.type) }}</td>
-              <td>{{ statusLabel(s.status) }}</td>
-              <td>每 {{ s.checkIntervalSec }} 秒</td>
+              <td>{{ subscriptionTypeLabel(s.type) }}</td>
+              <td>{{ subscriptionStatusLabel(s.status) }}</td>
+              <td>{{ t('subscriptions.everySec', { sec: s.checkIntervalSec }) }}</td>
               <td class="actions">
                 <button
                   type="button"
@@ -228,7 +229,7 @@ async function removeSub(s: Subscription) {
                   :disabled="busyId === s.id"
                   @click="toggleStatus(s)"
                 >
-                  {{ s.status === 'active' ? '暂停' : '启用' }}
+                  {{ s.status === 'active' ? t('subscriptions.pause') : t('subscriptions.enable') }}
                 </button>
                 <button
                   type="button"
@@ -236,14 +237,14 @@ async function removeSub(s: Subscription) {
                   :disabled="busyId === s.id"
                   @click="removeSub(s)"
                 >
-                  删除
+                  {{ t('subscriptions.delete') }}
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
         <p v-if="!loading && items.length === 0" class="empty muted">
-          暂无订阅，请使用上方表单添加。
+          {{ t('subscriptions.empty') }}
         </p>
       </div>
     </div>
@@ -269,50 +270,35 @@ async function removeSub(s: Subscription) {
   font-size: 0.88rem;
 }
 
-.form-title {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.card {
-  border: 1px solid var(--cs-border);
-  border-radius: 16px;
+.form.card {
   padding: 1.25rem;
-  background: rgba(255, 255, 255, 0.03);
 }
 
-.list-card {
-  padding: 0;
-  overflow: hidden;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
+.form-title {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.85rem;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  min-width: 140px;
+  min-width: 180px;
 }
 
 .field.grow {
   flex: 1;
-  min-width: 200px;
 }
 
 .field label {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--cs-muted);
 }
 
@@ -322,7 +308,17 @@ async function removeSub(s: Subscription) {
   border: 1px solid var(--cs-border);
   background: rgba(255, 255, 255, 0.04);
   color: var(--cs-text);
-  padding: 0.45rem 0.55rem;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+}
+
+.actions {
+  margin-top: 0.5rem;
+}
+
+.list-card {
+  padding: 0;
+  overflow: hidden;
 }
 
 .pager {
@@ -352,10 +348,6 @@ async function removeSub(s: Subscription) {
   color: var(--cs-muted);
 }
 
-.table-wrap {
-  padding: 0;
-}
-
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -377,8 +369,7 @@ async function removeSub(s: Subscription) {
 }
 
 .col-actions {
-  min-width: 160px;
-  width: 18%;
+  min-width: 140px;
 }
 
 .cell-main .title {
@@ -391,7 +382,7 @@ async function removeSub(s: Subscription) {
   font-size: 0.82rem;
 }
 
-.break {
+.sub.break {
   word-break: break-all;
 }
 
@@ -411,13 +402,12 @@ async function removeSub(s: Subscription) {
   border: 1px solid var(--cs-border);
   background: rgba(255, 255, 255, 0.04);
   color: var(--cs-text);
-  padding: 0.35rem 0.55rem;
+  padding: 0.45rem 0.75rem;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
 }
 
 .btn.primary {
-  align-self: flex-start;
   border-color: rgba(62, 207, 142, 0.45);
   color: var(--cs-accent, #3ecf8e);
 }
@@ -426,16 +416,19 @@ async function removeSub(s: Subscription) {
   padding: 0.45rem 0.75rem;
 }
 
-.btn.small:disabled,
-.btn:disabled,
-.btn.primary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.btn.small {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.82rem;
 }
 
 .btn.del {
   border-color: rgba(180, 120, 255, 0.35);
   color: #d4b4ff;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .empty {
