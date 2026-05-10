@@ -36,6 +36,9 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  await app.listen(process.env.PORT ?? 3000);
+  const port = Number(process.env.PORT ?? 3000);
+  // Node may default to IPv6 `::` only; some Linux setups then reject 127.0.0.1.
+  const host = process.env.HOST ?? '0.0.0.0';
+  await app.listen(port, host);
 }
 bootstrap();
