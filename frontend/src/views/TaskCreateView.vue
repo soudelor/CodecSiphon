@@ -36,7 +36,7 @@ const multiUrlMax = ref(5);
 const taskTitle = ref('');
 const platform = ref('');
 
-/** 视频质量：对应 yt-dlp -f */
+/** 视频质量 / 下载格式选择 */
 const qualityPreset = ref<'auto' | '2160' | '1080' | '720' | '480' | 'audio'>(
   'auto',
 );

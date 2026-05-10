@@ -57,7 +57,7 @@ async function onLogout() {
       <div class="brand">
         <span class="brand-mark">▶</span>
         <div>
-          <div class="brand-title">CodecSiphon</div>
+          <div class="brand-title">{{ t('layout.brandTitle') }}</div>
           <div class="brand-sub">{{ t('layout.brandSub') }}</div>
         </div>
       </div>
@@ -144,6 +144,8 @@ async function onLogout() {
 .brand-title {
   font-weight: 700;
   letter-spacing: 0.02em;
+  font-size: 0.92rem;
+  line-height: 1.35;
 }
 
 .brand-sub {

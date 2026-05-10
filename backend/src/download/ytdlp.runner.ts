@@ -39,6 +39,12 @@ export type RunYtdlpParams = {
   playlistItems?: string;
   /** --merge-output-format */
   mergeOutputFormat?: string;
+  /**
+   * 为 true 时：媒体流 [download] 进度只映射到单个 URL 内约 0–88%，
+   * 合并 / ffmpeg / 嵌入等后处理占 89–100%，避免「合并阶段」在条上消失。
+   * 由调用方根据 format 是否含 `+` 或是否配置 merge_output_format 决定。
+   */
+  reserveProgressTailForMerge?: boolean;
   writeSubtitles?: boolean;
   embedSubtitles?: boolean;
   subLangs?: string;
@@ -163,6 +169,27 @@ export function parseYtDlpProgressPercent(line: string): number | null {
   return Math.min(100, Math.max(0, Math.round(v)));
 }
 
+/** 合并、重封装、ffmpeg、嵌入元数据等（通常无 [download] x%） */
+export function isMergeOrPostProcessLine(line: string): boolean {
+  const t = line.trim().toLowerCase();
+  return (
+    t.includes('[merger]') ||
+    t.includes('merging formats') ||
+    t.includes('[ffmpeg]') ||
+    t.includes('invoking ffmpeg') ||
+    t.includes('[videoremuxer]') ||
+    t.includes('[fixup') ||
+    t.includes('[embedsubtitle]') ||
+    t.includes('[embedthumbnail]') ||
+    t.includes('[embedmetadata]') ||
+    t.includes('[metadata]') ||
+    t.includes('[postprocessor]') ||
+    t.includes('[movefiles]') ||
+    t.includes('[xattrffmpeg]') ||
+    t.includes('[thumbnailsconvertor]')
+  );
+}
+
 function createLineSplitter(
   onLine: (line: string) => void,
 ): (chunk: string) => void {
@@ -187,10 +214,34 @@ export function runYtdlp(p: RunYtdlpParams): Promise<void> {
   const HEARTBEAT_MS = 60_000;
   let heartbeat: ReturnType<typeof setInterval> | undefined;
 
+  /** 单 URL 内进度 0–100；reserve 模式下下载阶段最高 DOWNLOAD_CAP */
+  let lastEmittedProgress = 0;
+  const DOWNLOAD_CAP = 88;
+  const reserve = p.reserveProgressTailForMerge === true;
+  let mergeTailLines = 0;
+
   const feedProgressLine = (line: string) => {
     if (!p.onProgress) return;
-    const pct = parseYtDlpProgressPercent(line);
-    if (pct !== null) p.onProgress(pct);
+    const raw = parseYtDlpProgressPercent(line);
+    if (raw !== null) {
+      const mapped = reserve
+        ? Math.round((raw / 100) * DOWNLOAD_CAP)
+        : raw;
+      lastEmittedProgress = Math.max(lastEmittedProgress, mapped);
+      p.onProgress(lastEmittedProgress);
+      return;
+    }
+    if (reserve && isMergeOrPostProcessLine(line)) {
+      mergeTailLines += 1;
+      const tail = Math.min(
+        99,
+        DOWNLOAD_CAP + Math.min(11, mergeTailLines + 2),
+      );
+      if (tail > lastEmittedProgress) {
+        lastEmittedProgress = tail;
+        p.onProgress(lastEmittedProgress);
+      }
+    }
   };
   const onStdoutLine = createLineSplitter(feedProgressLine);
   const onStderrLine = createLineSplitter((line) => {
@@ -239,6 +290,14 @@ export function runYtdlp(p: RunYtdlpParams): Promise<void> {
       onStdoutLine('\n');
       onStderrLine('\n');
       if (code === 0) {
+        if (
+          reserve &&
+          p.onProgress &&
+          lastEmittedProgress < 100
+        ) {
+          lastEmittedProgress = 100;
+          p.onProgress(100);
+        }
         p.onDiagnostic?.('close', `exit=0 耗时 ${ms}ms`);
         resolve();
         return;

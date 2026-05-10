@@ -66,6 +66,7 @@ async function submit() {
     <div class="card">
       <div class="hero">
         <div class="logo">📝</div>
+        <p class="product-brand">{{ t('layout.brandTitle') }}</p>
         <h1>{{ t('auth.createAccount') }}</h1>
         <p class="tag">{{ t('auth.registerTagline') }}</p>
       </div>
@@ -161,9 +162,17 @@ async function submit() {
   font-size: 1.35rem;
 }
 
+.product-brand {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--cs-text);
+}
+
 h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.2rem;
 }
 
 .tag {

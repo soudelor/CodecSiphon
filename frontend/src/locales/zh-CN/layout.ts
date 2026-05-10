@@ -5,6 +5,8 @@ export default {
   navFiles: '文件管理',
   navSettings: '设置',
   navHelp: '帮助',
+  brandTitle: 'CodecSiphon',
+  documentTitleSuffix: 'CodecSiphon',
   brandSub: '视频下载控制台',
   disclaimer:
     '本应用及相关资源仅供个人学习研究使用，禁止任何商业用途。请勿用于商用、二次售卖及盈利行为，违规使用后果由使用者自行承担。',

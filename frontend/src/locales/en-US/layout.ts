@@ -5,6 +5,8 @@ export default {
   navFiles: 'Files',
   navSettings: 'Settings',
   navHelp: 'Help',
+  brandTitle: 'CodecSiphon',
+  documentTitleSuffix: 'CodecSiphon',
   brandSub: 'Video download console',
   disclaimer:
     'This app and related resources are for personal learning and research only. Commercial use, resale, or profit is prohibited. You are responsible for any misuse.',

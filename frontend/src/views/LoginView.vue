@@ -121,7 +121,7 @@ async function submit() {
     <div class="card">
       <div class="hero">
         <div class="logo">▶</div>
-        <h1>CodecSiphon</h1>
+        <h1>{{ t('layout.brandTitle') }}</h1>
         <p class="tag">{{ t('auth.loginTagline') }}</p>
       </div>
 
@@ -242,7 +242,9 @@ async function submit() {
 
 h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  font-weight: 700;
 }
 
 .tag {

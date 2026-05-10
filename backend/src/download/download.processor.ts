@@ -117,6 +117,7 @@ export class DownloadProcessor extends WorkerHost {
 
     const playlistMode = task.sourceType === TaskSourceType.playlist;
     const fmt = readOptionString(task.options, 'format');
+    const effectiveFmt = fmt?.trim() || 'bv*+ba/b';
     const proxy =
       readOptionString(task.options, 'proxy_url') ??
       readOptionString(task.options, 'proxy');
@@ -133,7 +134,7 @@ export class DownloadProcessor extends WorkerHost {
     });
 
     this.log.log(
-      `Task ${taskId} status=downloading progressPercent=2（随后根据 yt-dlp 输出的 [download] x% 节流更新；仅合并/无百分比阶段可能仍变化较少）`,
+      `Task ${taskId} status=downloading progressPercent=2（多流/合并任务会将 [download] 映射到约 0–88%，合并与后处理占 89–100%）`,
     );
 
     await this.appendLog(taskId, 'info', `开始下载，共 ${urls.length} 个地址`);
@@ -270,6 +271,12 @@ export class DownloadProcessor extends WorkerHost {
             embedSubtitles,
             embedMetadata,
             embedThumbnail,
+            reserveProgressTailForMerge:
+              /\+/.test(effectiveFmt) ||
+              !!mergeOutputFormat?.trim() ||
+              embedSubtitles ||
+              embedThumbnail ||
+              embedMetadata,
             onProgress: reportStreamProgress,
             onDiagnostic: (event, detail) => {
               this.log.log(

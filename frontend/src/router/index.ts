@@ -1,5 +1,32 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '@/layouts/MainLayout.vue';
+import { i18n } from '@/locales';
+
+function documentTitleForRoute(
+  name: string | symbol | undefined,
+): string {
+  const t = i18n.global.t;
+  switch (name) {
+    case 'login':
+      return t('auth.login');
+    case 'register':
+      return t('auth.register');
+    case 'dashboard':
+      return t('layout.titleDashboard');
+    case 'task-new':
+      return t('layout.titleTaskNew');
+    case 'tasks':
+      return t('layout.titleTasks');
+    case 'files':
+      return t('layout.titleFiles');
+    case 'settings':
+      return t('layout.titleSettings');
+    case 'help':
+      return t('layout.titleHelp');
+    default:
+      return t('common.workspace');
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -71,6 +98,12 @@ router.beforeEach((to) => {
     return { path: '/' };
   }
   return true;
+});
+
+router.afterEach((to) => {
+  const page = documentTitleForRoute(to.name);
+  const suffix = i18n.global.t('layout.documentTitleSuffix');
+  document.title = `${page} · ${suffix}`;
 });
 
 export default router;
