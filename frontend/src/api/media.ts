@@ -25,25 +25,39 @@ export async function listMedia(page = 1, limit = 20, q?: string) {
   return data;
 }
 
-/** `downloadAsName` 为浏览器「另存为」使用的完整文件名（通常已含扩展名） */
+const apiBase = (): string =>
+  (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+
+/**
+ * 使用短期令牌由服务端流式响应；通过隐藏 iframe 触发下载，不新开可见标签页。
+ * `downloadAsName` 写入签发令牌，服务端用于 Content-Disposition。
+ */
 export async function downloadMediaToDevice(id: string, downloadAsName: string) {
-  const res = await api.get(`/media/${id}/download`, {
-    responseType: 'blob',
-    timeout: 0,
-  });
-
-  const blob = res.data as Blob;
   const name = downloadAsName.trim() || 'download';
+  const { data } = await api.post<{
+    path: string;
+    token: string;
+    expiresInSec: number;
+  }>(`/media/${id}/download-link`, {
+    fileName: name,
+  });
+  const url = `${apiBase()}${data.path}?dl_token=${encodeURIComponent(data.token)}`;
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.tabIndex = -1;
+  iframe.style.cssText =
+    'position:fixed;width:0;height:0;border:0;clip:rect(0,0,0,0);pointer-events:none';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+
+  window.setTimeout(() => {
+    try {
+      iframe.remove();
+    } catch {
+      /* ignore */
+    }
+  }, 300_000);
 }
 
 export async function deleteMedia(id: string): Promise<void> {
