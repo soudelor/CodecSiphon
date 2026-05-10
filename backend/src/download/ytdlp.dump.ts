@@ -196,7 +196,7 @@ function appendBrowserLikeArgs(args: string[], url: string, opts: YtDlpDumpOptio
 export async function ytDlpDumpJson(
   bin: string,
   url: string,
-opts: YtDlpDumpOptions = {},
+  opts: YtDlpDumpOptions = {},
 ): Promise<unknown> {
   const timeoutMs = opts.timeoutMs ?? 120_000;
   const useFlat =
