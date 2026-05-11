@@ -19,4 +19,6 @@ export default {
   titleSettings: '设置',
   titleHelp: '帮助',
   logout: '登出',
+  sidebarCollapse: '收起侧栏',
+  sidebarExpand: '展开侧栏',
 } as const;

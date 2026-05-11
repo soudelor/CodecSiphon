@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import {
 } from '@prisma/client';
 import { QUEUE_DOWNLOAD } from '../download/download.constants';
 import { PrismaService } from '../prisma/prisma.service';
+import { PreviewMetadataError } from '../download/preview-metadata.error';
 import { mapYtDlpJsonToPreview, ytDlpDumpJson } from '../download/ytdlp.dump';
 import { getMultiUrlMaxLinks } from '../common/download-limits';
 import { sourceUrlsFromJson } from '../common/source-urls.util';
@@ -48,6 +50,8 @@ function serializeTask(task: DownloadTask) {
 
 @Injectable()
 export class TasksService {
+  private readonly logger = new Logger(TasksService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(QUEUE_DOWNLOAD) private readonly downloadQueue: Queue,
@@ -178,7 +182,7 @@ export class TasksService {
   async previewMediaUrl(url: string) {
     const trimmed = url.trim();
     if (!trimmed) {
-      throw new BadRequestException('请填写 URL');
+      throw new BadRequestException({ key: 'errors.previewUrlRequired' });
     }
     const bin =
       this.config.get<string>('YTDLP_PATH') ??
@@ -194,8 +198,13 @@ export class TasksService {
       });
       return mapYtDlpJsonToPreview(raw);
     } catch (e) {
+      if (e instanceof PreviewMetadataError) {
+        this.logger.warn(`previewMediaUrl: ${e.message}`);
+        throw new BadRequestException({ key: e.i18nKey });
+      }
       const msg = e instanceof Error ? e.message : String(e);
-      throw new BadRequestException(msg.slice(0, 2000));
+      this.logger.warn(`previewMediaUrl: ${msg.slice(0, 2000)}`);
+      throw new BadRequestException({ key: 'errors.previewMetadataFailed' });
     }
   }
 

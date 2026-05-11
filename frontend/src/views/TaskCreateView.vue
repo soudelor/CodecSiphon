@@ -141,14 +141,24 @@ function buildPlaylistItemsOption(): string | undefined {
 }
 
 function apiErr(e: unknown): string {
-  const r =
+  const data =
     e &&
     typeof e === 'object' &&
     'response' in e &&
-    (e as { response?: { data?: { message?: unknown } } }).response?.data
-      ?.message;
-  const m = r;
-  if (Array.isArray(m)) return m.join('；');
+    (e as { response?: { data?: unknown } }).response?.data &&
+    typeof (e as { response: { data: unknown } }).response.data === 'object'
+      ? ((e as { response: { data: Record<string, unknown> } }).response
+          .data as Record<string, unknown>)
+      : null;
+  if (data && typeof data.key === 'string' && data.key) {
+    const args = data.args;
+    if (args && typeof args === 'object' && !Array.isArray(args)) {
+      return t(data.key, args as Record<string, unknown>);
+    }
+    return t(data.key);
+  }
+  const m = data?.message;
+  if (Array.isArray(m)) return m.filter((x) => typeof x === 'string').join('；');
   if (typeof m === 'string') return m;
   return t('taskCreate.operationFailed');
 }
