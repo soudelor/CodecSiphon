@@ -186,8 +186,13 @@ async function submit() {
         </button>
 
         <div class="footer">
-          <span>{{ t('auth.noAccount') }}</span>
-          <RouterLink to="/register">{{ t('auth.registerLink') }}</RouterLink>
+          <div class="footer-left">
+            <span>{{ t('auth.noAccount') }}</span>
+            <RouterLink to="/register">{{ t('auth.registerLink') }}</RouterLink>
+          </div>
+          <RouterLink class="tool-link" to="/tools/url-extract">{{
+            t('auth.urlExtractPublicLink')
+          }}</RouterLink>
         </div>
       </form>
     </div>
@@ -371,13 +376,36 @@ h1 {
 
 .footer {
   margin-top: 0.5rem;
-  text-align: center;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
   font-size: 0.9rem;
   color: var(--cs-muted);
 }
 
-.footer a {
+.footer-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.footer-left a {
   color: var(--cs-accent);
   margin-left: 0.35rem;
+}
+
+.tool-link {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  color: var(--cs-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tool-link:hover {
+  color: var(--cs-accent);
+  text-decoration: underline;
 }
 </style>

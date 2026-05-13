@@ -43,6 +43,7 @@ const nav = computed(() => [
   { to: '/tasks/new', label: t('layout.navNewTask'), icon: '⬇' },
   { to: '/tasks', label: t('layout.navTasks'), icon: '☰' },
   { to: '/files', label: t('layout.navFiles'), icon: '▣' },
+  { to: '/url-extract', label: t('layout.navUrlExtract'), icon: '≡' },
   { to: '/settings', label: t('layout.navSettings'), icon: '⚙' },
   { to: '/help', label: t('layout.navHelp'), icon: '?' },
 ]);
@@ -60,6 +61,7 @@ const titleMap = computed<Record<string, string>>(() => ({
   'task-new': t('layout.titleTaskNew'),
   tasks: t('layout.titleTasks'),
   files: t('layout.titleFiles'),
+  'url-extract': t('layout.titleUrlExtract'),
   settings: t('layout.titleSettings'),
   help: t('layout.titleHelp'),
 }));

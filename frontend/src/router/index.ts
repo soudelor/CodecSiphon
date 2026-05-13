@@ -23,6 +23,10 @@ function documentTitleForRoute(
       return t('layout.titleSettings');
     case 'help':
       return t('layout.titleHelp');
+    case 'url-extract':
+      return t('layout.titleUrlExtract');
+    case 'url-extract-public':
+      return t('urlExtract.publicTitle');
     default:
       return t('common.workspace');
   }
@@ -42,6 +46,17 @@ const router = createRouter({
       name: 'register',
       component: () => import('@/views/RegisterView.vue'),
       meta: { guest: true },
+    },
+    {
+      path: '/tools',
+      component: () => import('@/layouts/PublicToolLayout.vue'),
+      children: [
+        {
+          path: 'url-extract',
+          name: 'url-extract-public',
+          component: () => import('@/views/UrlExtractPublicView.vue'),
+        },
+      ],
     },
     {
       path: '/',
@@ -67,6 +82,11 @@ const router = createRouter({
           path: 'files',
           name: 'files',
           component: () => import('@/views/FilesView.vue'),
+        },
+        {
+          path: 'url-extract',
+          name: 'url-extract',
+          component: () => import('@/views/UrlExtractView.vue'),
         },
         {
           path: 'subscriptions',

@@ -24,7 +24,8 @@
     "prisma:generate": "npm run prisma:sync && prisma generate",
     "prisma:migrate": "npm run prisma:sync && prisma migrate deploy",
     "prisma:migrate:dev": "npm run prisma:sync && prisma migrate dev",
-    "prisma:db:push": "npm run prisma:sync && prisma db push"
+    "prisma:db:push": "npm run prisma:sync && prisma db push",
+    "probe:url-extract": "node scripts/probe-url-extract.mjs"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

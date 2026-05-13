@@ -20,6 +20,37 @@ const { t } = useI18n();
       </p>
     </div>
 
+    <div class="card support">
+      <h3 class="h">{{ t('help.supportTitle') }}</h3>
+      <p class="support-body">{{ t('help.supportBody') }}</p>
+      <div class="qr-grid" role="group" :aria-label="t('help.supportTitle')">
+        <figure class="qr-item">
+          <img
+            class="qr-img"
+            src="/support-wechat-pay.png"
+            :alt="t('help.supportWechatAlt')"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption class="qr-cap">
+            {{ t('help.supportWechatCaption') }}
+          </figcaption>
+        </figure>
+        <figure class="qr-item">
+          <img
+            class="qr-img"
+            src="/support-alipay.png"
+            :alt="t('help.supportAlipayAlt')"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption class="qr-cap">
+            {{ t('help.supportAlipayCaption') }}
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+
     <div class="card">
       <h3 class="h">{{ t('help.quickStart') }}</h3>
       <ol class="list">
@@ -141,5 +172,47 @@ const { t } = useI18n();
 
 .list strong {
   font-weight: 600;
+}
+
+.support-body {
+  margin: 0 0 1rem;
+  max-width: 52rem;
+  line-height: 1.65;
+  font-size: 0.9rem;
+  color: var(--cs-text);
+}
+
+.qr-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 2rem;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.qr-item {
+  margin: 0;
+  text-align: center;
+  max-width: min(168px, 100%);
+}
+
+.qr-img {
+  display: block;
+  width: auto;
+  max-width: min(144px, 100%);
+  height: 156px;
+  margin: 0 auto;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 12px;
+  border: 1px solid var(--cs-border);
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.qr-cap {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--cs-muted);
 }
 </style>

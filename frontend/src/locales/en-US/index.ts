@@ -10,6 +10,7 @@ import subscriptions from './subscriptions';
 import taskCreate from './taskCreate';
 import taskMeta from './taskMeta';
 import tasksPage from './tasksPage';
+import urlExtract from './urlExtract';
 
 export default {
   common,
@@ -24,4 +25,5 @@ export default {
   settings,
   help,
   subscriptions,
+  urlExtract,
 } as const;

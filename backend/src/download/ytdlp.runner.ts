@@ -39,6 +39,8 @@ export type RunYtdlpParams = {
   playlistItems?: string;
   /** --merge-output-format */
   mergeOutputFormat?: string;
+  /** yt-dlp --download-sections，如 *0:00-0:45（需本机 PATH 中有 ffmpeg） */
+  downloadSections?: string;
   /**
    * 为 true 时：媒体流 [download] 进度只映射到单个 URL 内约 0–88%，
    * 合并 / ffmpeg / 嵌入等后处理占 89–100%，避免「合并阶段」在条上消失。
@@ -150,6 +152,9 @@ function buildArgs(p: RunYtdlpParams): string[] {
   }
   if (p.mergeOutputFormat?.trim()) {
     args.push('--merge-output-format', p.mergeOutputFormat.trim());
+  }
+  if (p.downloadSections?.trim()) {
+    args.push('--download-sections', p.downloadSections.trim());
   }
   args.push(p.url);
   return args;

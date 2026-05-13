@@ -14,6 +14,7 @@ export default {
   login: '登录',
   noAccount: '还没有账户？',
   registerLink: '注册',
+  urlExtractPublicLink: '视频解析',
   captchaLoadFallback:
     '无法加载验证码，请确认后端与 Redis 可用后刷新页面',
   invalidLoginFallback: '用户名或密码错误',

@@ -15,6 +15,7 @@ export default {
   login: 'Sign in',
   noAccount: 'No account yet?',
   registerLink: 'Register',
+  urlExtractPublicLink: 'URL extract',
   captchaLoadFallback:
     'Could not load captcha. Ensure the API and Redis are running, then refresh.',
   invalidLoginFallback: 'Incorrect username or password.',

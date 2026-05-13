@@ -52,7 +52,8 @@ api.interceptors.request.use((config) => {
   const skipAuth =
     url.includes('/auth/login') ||
     url.includes('/auth/register') ||
-    url.includes('/auth/refresh');
+    url.includes('/auth/refresh') ||
+    url.includes('/url-extract/preview-public');
 
   if (!skipAuth) {
     const token = localStorage.getItem('accessToken');
