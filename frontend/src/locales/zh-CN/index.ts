@@ -10,6 +10,7 @@ import subscriptions from './subscriptions';
 import taskCreate from './taskCreate';
 import taskMeta from './taskMeta';
 import tasksPage from './tasksPage';
+import urlExtract from './urlExtract';
 
 /** zh-CN 语言包：按模块拆分，汇总为单一 messages 对象 */
 export default {
@@ -25,4 +26,5 @@ export default {
   settings,
   help,
   subscriptions,
+  urlExtract,
 } as const;

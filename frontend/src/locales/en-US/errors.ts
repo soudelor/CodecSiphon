@@ -19,4 +19,12 @@ export default {
     'Could not fetch video info for this link. Some sites require the server to be signed in; ask an administrator if this keeps happening.',
   previewMetadataParseFailed: 'Could not parse the video metadata. Please try again later.',
   previewMetadataFailed: 'Link check failed. Please try again later.',
+  urlExtractRateLimited: 'Too many requests. Please try again later.',
+  urlExtractDouyinHomeFeed:
+    'This Douyin home or feed URL cannot list videos. Use a single video page (/video/…) or an author profile works list URL instead.',
+  urlExtractDouyinNeedDeepLink:
+    'This Douyin URL is not a video or works list page. Open a specific video or the author works tab and paste that full URL.',
+  urlExtractSampleInvalidUrl: 'Invalid media URL',
+  urlExtractSampleFailed:
+    'Could not download the clip. Ensure ffmpeg is installed on the server, or try again later.',
 } as const;

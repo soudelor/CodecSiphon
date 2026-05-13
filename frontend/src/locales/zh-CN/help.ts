@@ -30,4 +30,11 @@ export default {
   faqDelete: '删除任务会怎样',
   faqDeleteAns:
     '会取消未完成的下载，并删除该任务对应的已下载文件夹及文件库中的记录，且不可恢复。',
+  supportTitle: '支持项目',
+  supportBody:
+    '每一行代码，皆是熬夜打磨的心血；每一次更新，都饱含用心坚守。软件开发投入不菲，若觉得产品实用，欢迎扫码支持。有你的支持，我才能持续迭代，打磨出更好用的版本。',
+  supportWechatCaption: '微信支付',
+  supportAlipayCaption: '支付宝',
+  supportWechatAlt: '微信支付收款二维码',
+  supportAlipayAlt: '支付宝收款二维码',
 } as const;

@@ -32,6 +32,32 @@ export type TaskPreviewPlaylist = {
 
 export type TaskPreviewResult = TaskPreviewVideo | TaskPreviewPlaylist;
 
+/** 与后端 UrlExtractItemDto 对齐 */
+export type UrlExtractItem = {
+  index: number;
+  title: string;
+  durationSec: number | null;
+  durationLabel: string | null;
+  resolution: string | null;
+  publishedAt: string | null;
+  copyUrl: string;
+};
+
+export type UrlExtractPublicResult = {
+  sourceUrl: string;
+  total: number;
+  previewItems: UrlExtractItem[];
+  hiddenCount: number;
+  listTruncated: boolean;
+};
+
+export type UrlExtractFullResult = {
+  sourceUrl: string;
+  total: number;
+  items: UrlExtractItem[];
+  listTruncated: boolean;
+};
+
 export type TaskStatus =
   | 'pending'
   | 'queued'

@@ -1,6 +1,6 @@
 # CodecSiphon
 
-面向「视频下载 / 订阅 / 配额与文件管理」的全栈初版：**后端**位于 `backend/`（NestJS），**前端**位于 `frontend/`（Vue 3 + Vite），侧边栏与页面划分对齐仓库内 `function&UI.md`。数据模型见 [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md)，架构见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+面向「视频下载 / 订阅 / 配额与文件管理」的全栈初版：**后端**位于 `backend/`（NestJS），**前端**位于 `frontend/`（Vue 3 + Vite），侧边栏与页面划分对齐仓库内 `function&UI.md`。**链接解析**：公开预览 [http://localhost:5173/tools/url-extract](http://localhost:5173/tools/url-extract)（无需登录；支持 `?url=` 预填），登录后完整列表为 [http://localhost:5173/url-extract](http://localhost:5173/url-extract)；设计与环境变量见 [docs/URL_EXTRACT.md](docs/URL_EXTRACT.md)。数据模型见 [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md)，架构见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
 ## 技术栈
 
@@ -13,19 +13,20 @@
 | 校验 | class-validator / class-transformer |
 | Web UI | Vue 3、Vue Router、Pinia、Axios、Vite |
 
-下载队列（**BullMQ** + **Redis**）与 **yt-dlp** Worker 已接入；前端已实现 **文件管理**（列表 / 搜索 / **下载到本机** / 删除）、**设置**（用户 `preferences` 与 `download_defaults`）、**帮助** 等页面。**订阅管理**相关前端入口暂时隐藏（后端 API 仍保留）。
+下载队列（**BullMQ** + **Redis**）与 **yt-dlp** Worker 已接入；前端已实现 **文件管理**（列表 / 搜索 / **下载到本机** / 删除）、**链接解析**（`/tools/url-extract` 引流预览 + `/url-extract` 登录完整列表）、**设置**（用户 `preferences` 与 `download_defaults`）、**帮助** 等页面。**订阅管理**相关前端入口暂时隐藏（后端 API 仍保留）。
 
 ## 仓库结构
 
 ```
 CodecSiphon/
 ├── package.json             # npm workspaces 根（可在仓库根执行 npm install）
-├── frontend/                # Vue 3 SPA（登录 / 仪表盘 / 任务 / 文件 / 设置 / 帮助；订阅页面临时隐藏）
+├── frontend/                # Vue 3 SPA（登录 / 仪表盘 / 任务 / 文件 / 链接解析 / 设置 / 帮助；订阅页面临时隐藏）
 ├── backend/                 # NestJS API
 │   ├── prisma/              # schema + migrations
 │   ├── src/
 │   │   ├── auth/            # 注册 / 登录 / refresh / logout
 │   │   ├── tasks/           # 下载任务（创建 / 列表 / 状态 / 删除）
+│   │   ├── url-extract/     # 链接解析（公开预览 + 登录解析列表，yt-dlp）
 │   │   ├── media/           # 媒体文件列表 / 流式下载 / 删除
 │   │   ├── subscriptions/   # 订阅源 CRUD
 │   │   ├── settings/        # 当前用户 user_settings（GET / PATCH）
@@ -35,7 +36,8 @@ CodecSiphon/
 │   └── .env.example
 ├── docs/
 │   ├── DATABASE_DESIGN.md
-│   └── ARCHITECTURE.md
+│   ├── ARCHITECTURE.md
+│   └── URL_EXTRACT.md
 └── README.md
 ```
 
@@ -142,7 +144,7 @@ npm run dev
 npm run start:dev:web
 ```
 
-浏览器访问 **http://localhost:5173**。请先完成注册/登录，再使用「新建任务」「任务管理」「文件管理」等功能；文件管理支持将服务端 `DOWNLOAD_ROOT` 下的已入库媒体 **下载到本机**（需有效 JWT）。
+浏览器访问 **http://localhost:5173**。未登录可直接打开 **`/tools/url-extract`** 试用链接解析（公开接口有 IP 限流）；登录后可使用「新建任务」「任务管理」「文件管理」及站内 **`/url-extract`** 完整列表。文件管理支持将服务端 `DOWNLOAD_ROOT` 下的已入库媒体 **下载到本机**（需有效 JWT）。
 
 ### 6. 健康检查
 
@@ -166,7 +168,7 @@ GET /health
 
 ## API 摘要
 
-所有 JSON 接口请求体需使用 `Content-Type: application/json`。除认证与健康检查外，业务接口需携带：
+所有 JSON 接口请求体需使用 `Content-Type: application/json`。除认证、健康检查、`/url-extract/preview-public` 等明确公开的接口外，业务接口需携带：
 
 ```http
 Authorization: Bearer <access_token>
@@ -205,6 +207,15 @@ Authorization: Bearer <access_token>
 
 列表中的 `sizeBytes` 为字符串。
 
+### 链接解析 `/url-extract`
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/url-extract/preview-public` | **无需 JWT**；返回总数、前若干条预览（含可复制 `copyUrl`）；**IP 限流**（`URL_EXTRACT_*`，详见 [docs/URL_EXTRACT.md](docs/URL_EXTRACT.md)） |
+| POST | `/url-extract/parse` | **需 JWT**；返回完整条目列表（受 `URL_EXTRACT_MAX_ITEMS` 上限约束） |
+
+请求体：`{ "url": "…" }`（与任务预览类似）。
+
 ### 订阅 `/subscriptions`（后端 API；**当前前端不提供管理界面**）
 
 | 方法 | 路径 | 说明 |
@@ -241,6 +252,7 @@ Authorization: Bearer <access_token>
 
 - [数据库设计](docs/DATABASE_DESIGN.md)
 - [系统架构](docs/ARCHITECTURE.md)
+- [链接解析（URL Extract）](docs/URL_EXTRACT.md)
 - 界面与功能规划：仓库根目录 `function&UI.md`
 
 ## 许可证

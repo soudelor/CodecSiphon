@@ -18,4 +18,11 @@ export default {
     '暂无法获取该链接的视频信息。部分站点需在服务器侧配置登录状态后才能检测与下载，请联系管理员处理',
   previewMetadataParseFailed: '解析视频信息失败，请稍后再试',
   previewMetadataFailed: '链接检测失败，请稍后重试',
+  urlExtractRateLimited: '请求过于频繁，请稍后再试',
+  urlExtractDouyinHomeFeed:
+    '这是抖音首页或推荐流链接，无法列出视频。请改用单个视频页（地址中含 /video/ ）或作者主页作品列表链接。',
+  urlExtractDouyinNeedDeepLink:
+    '该抖音链接不是视频页或作品列表页，无法用链接解析列出条目。请打开具体视频或作者主页作品 tab 后复制完整链接再试。',
+  urlExtractSampleInvalidUrl: '无效的媒体链接',
+  urlExtractSampleFailed: '节选下载失败，请确认服务器已安装 ffmpeg，或稍后再试',
 } as const;

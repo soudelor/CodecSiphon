@@ -13,6 +13,7 @@ import { SettingsModule } from './settings/settings.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SecurityModule } from './common/security/security.module';
 import { TasksModule } from './tasks/tasks.module';
+import { UrlExtractModule } from './url-extract/url-extract.module';
 
 /**
  * Always resolve `backend/.env` relative to this module (`src/` or `dist/`),
@@ -51,6 +52,7 @@ const envFilePaths = [...new Set(envCandidates.filter((path) => existsSync(path)
     SubscriptionsModule,
     SettingsModule,
     TasksModule,
+    UrlExtractModule,
   ],
   controllers: [AppController],
   providers: [AppService],

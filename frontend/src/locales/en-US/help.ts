@@ -31,4 +31,11 @@ export default {
   faqDelete: 'What happens when I delete a task?',
   faqDeleteAns:
     'Incomplete downloads stop, and the task folder plus library rows are removed permanently.',
+  supportTitle: 'Support the project',
+  supportBody:
+    'Every line of code reflects long nights of careful polishing; every update carries real dedication. Software development takes serious investment. If you find this product useful, feel free to scan a code to chip in. With your support, I can keep iterating and making it better.',
+  supportWechatCaption: 'WeChat Pay',
+  supportAlipayCaption: 'Alipay',
+  supportWechatAlt: 'WeChat Pay QR code for tips',
+  supportAlipayAlt: 'Alipay QR code for tips',
 } as const;

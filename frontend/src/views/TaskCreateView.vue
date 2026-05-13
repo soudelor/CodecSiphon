@@ -388,7 +388,10 @@ function formatEntryDur(sec: number | null): string {
     />
 
     <!-- ——— 单视频向导 ——— -->
-    <div v-if="mainTab === 'single'" class="card">
+    <div
+      v-if="mainTab === 'single'"
+      :class="['card', previewLoading && singleStep === 1 && 'card--detecting']"
+    >
       <div class="steps">
         <span :class="['dot', singleStep >= 1 && 'on']">{{ t('taskCreate.step1Label') }}</span>
         <span class="sep">→</span>
@@ -407,16 +410,21 @@ function formatEntryDur(sec: number | null): string {
             type="url"
             placeholder="https://..."
             autocomplete="off"
+            :disabled="previewLoading"
           />
         </div>
         <div class="btn-row">
           <button
             type="button"
-            class="btn"
+            class="btn btn-with-spinner"
             :disabled="previewLoading"
+            :aria-busy="previewLoading"
             @click="runDetectSingle"
           >
-            {{ previewLoading ? t('taskCreate.detecting') : t('taskCreate.detectLink') }}
+            <span v-if="previewLoading" class="spinner" aria-hidden="true" />
+            <span>{{
+              previewLoading ? t('taskCreate.detecting') : t('taskCreate.detectLink')
+            }}</span>
           </button>
           <button type="button" class="btn ghost" @click="pasteFromClipboard">
             {{ t('taskCreate.pasteClipboard') }}
@@ -570,19 +578,41 @@ function formatEntryDur(sec: number | null): string {
       </div>
 
       <template v-if="batchMode === 'playlist'">
+        <div
+          :class="[
+            'playlist-load-block',
+            playlistPreviewLoading && 'playlist-load-block--busy',
+          ]"
+        >
         <div class="field">
           <label>{{ t('taskCreate.playlistUrlLabel') }}</label>
-          <input v-model="playlistUrl" type="url" placeholder="https://...playlist..." />
+          <input
+            v-model="playlistUrl"
+            type="url"
+            placeholder="https://...playlist..."
+            :disabled="playlistPreviewLoading"
+          />
         </div>
         <div class="btn-row">
           <button
             type="button"
-            class="btn"
+            class="btn btn-with-spinner"
             :disabled="playlistPreviewLoading"
+            :aria-busy="playlistPreviewLoading"
             @click="loadPlaylistEntries"
           >
-            {{ playlistPreviewLoading ? t('taskCreate.loadingEntries') : t('taskCreate.loadEntries') }}
+            <span
+              v-if="playlistPreviewLoading"
+              class="spinner"
+              aria-hidden="true"
+            />
+            <span>{{
+              playlistPreviewLoading
+                ? t('taskCreate.loadingEntries')
+                : t('taskCreate.loadEntries')
+            }}</span>
           </button>
+        </div>
         </div>
         <div class="two-col range">
           <fieldset class="fieldset">
@@ -764,6 +794,26 @@ function formatEntryDur(sec: number | null): string {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.card--detecting {
+  border-color: rgba(62, 207, 142, 0.35);
+  animation: tc-detect-pulse 1.25s ease-in-out infinite;
+}
+
+@keyframes tc-detect-pulse {
+  50% {
+    border-color: rgba(62, 207, 142, 0.55);
+    box-shadow: 0 0 0 1px rgba(62, 207, 142, 0.12);
+  }
+}
+
+.playlist-load-block--busy {
+  border-radius: 12px;
+  padding: 0.5rem 0.5rem 0;
+  margin: -0.25rem -0.25rem 0.5rem;
+  border: 1px solid transparent;
+  animation: tc-detect-pulse 1.25s ease-in-out infinite;
+}
+
 .steps {
   display: flex;
   align-items: center;
@@ -882,6 +932,28 @@ function formatEntryDur(sec: number | null): string {
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.btn-with-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.spinner {
+  width: 0.95em;
+  height: 0.95em;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: tc-spin 0.7s linear infinite;
+}
+
+@keyframes tc-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .hidden-file {

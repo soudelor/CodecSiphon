@@ -116,6 +116,7 @@ flowchart TB
 
 - 用户注册登录、资料、密码重置（邮件可选）。
 - CRUD：下载任务、订阅、文件记录、用户设置。
+- **链接解析（URL Extract）**：基于 yt-dlp `-J` + `--flat-playlist` 拉取播放列表/频道类页面的条目（标题、时长、分辨率、发布时间、可复制链接）；`/url-extract/preview-public` 面向未登录引流（条数预览 + 严格 IP 限流），`/url-extract/parse` 面向已登录完整列表（有配置上限）。详见 [URL_EXTRACT.md](URL_EXTRACT.md)。
 - **不写长阻塞**：创建任务只入队并返回 `taskId`；进度查询读 DB + 缓存。
 
 ### 5.2 Worker 服务
@@ -167,6 +168,7 @@ flowchart TB
 | 定时下载 | BullMQ delay / cron |
 | 频道订阅 | `subscriptions` + 调度 Job |
 | 多分辨率/格式/字幕 | Job `payload.options` + yt-dlp/FFmpeg |
+| 链接解析（列表预览/引流） | `/url-extract/*` + yt-dlp；设计见 [URL_EXTRACT.md](URL_EXTRACT.md) |
 | 下载历史/搜索 | `download_tasks` + `media_files` 索引 |
 | 存储配额 | 用户表累计字段 + 完成钩子 |
 | 系统监控 | 指标 + 管理 API |
