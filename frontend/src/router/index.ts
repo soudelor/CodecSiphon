@@ -100,6 +100,7 @@ const router = createRouter({
         {
           path: 'help',
           name: 'help',
+          meta: { requiresAuth: false },
           component: () => import('@/views/HelpView.vue'),
         },
       ],
