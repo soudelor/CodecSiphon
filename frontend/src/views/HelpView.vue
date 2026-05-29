@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppVersionLabel from '@/components/AppVersionLabel.vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 
@@ -97,6 +98,8 @@ const { t } = useI18n();
         </li>
       </ul>
     </div>
+
+    <AppVersionLabel variant="labeled" />
   </div>
 </template>
 

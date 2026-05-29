@@ -2,8 +2,14 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter, RouterLink, RouterView } from 'vue-router';
+import * as settingsApi from '@/api/settings';
+import AppVersionLabel from '@/components/AppVersionLabel.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import { useAuthStore } from '@/stores/auth';
+import {
+  formatBytesBigIntString,
+  storageUsePercentString,
+} from '@/utils/format-bytes-bigint';
 
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -14,12 +20,91 @@ const SIDEBAR_STORAGE_KEY = 'codec-siphon-sidebar-collapsed';
 
 const sidebarCollapsed = ref(false);
 
+function usedQuotaStr(): string {
+  return auth.user?.storageUsedBytes?.trim() ?? '';
+}
+
+function quotaLimitStr(): string {
+  return auth.user?.storageQuotaBytes?.trim() ?? '';
+}
+
+const hasStorageQuotaInfo = computed(() => {
+  const u = auth.user;
+  return Boolean(
+    u?.storageUsedBytes &&
+      u.storageUsedBytes.trim() !== '' &&
+      u?.storageQuotaBytes &&
+      u.storageQuotaBytes.trim() !== '' &&
+      u?.monthlyDownloadQuotaBytes &&
+      u.monthlyDownloadQuotaBytes.trim() !== '',
+  );
+});
+
+const storagePct = computed(() => {
+  if (!hasStorageQuotaInfo.value) {
+    return 0;
+  }
+  return storageUsePercentString(usedQuotaStr(), quotaLimitStr());
+});
+
+const formatUsedSide = computed(() =>
+  hasStorageQuotaInfo.value
+    ? formatBytesBigIntString(usedQuotaStr())
+    : '',
+);
+const formatQuotaSide = computed(() =>
+  hasStorageQuotaInfo.value
+    ? formatBytesBigIntString(quotaLimitStr())
+    : '',
+);
+const formatMonthlySide = computed(() =>
+  hasStorageQuotaInfo.value && auth.user?.monthlyDownloadQuotaBytes
+    ? formatBytesBigIntString(auth.user.monthlyDownloadQuotaBytes)
+    : '',
+);
+
+const storageBarWidth = computed(() => storagePct.value);
+
+const storageOverQuotaSide = computed(() => {
+  try {
+    return BigInt(usedQuotaStr() || '0') > BigInt(quotaLimitStr() || '0');
+  } catch {
+    return false;
+  }
+});
+
+async function syncUserQuotasFromApi() {
+  if (!auth.isAuthenticated) return;
+  if (
+    auth.user?.storageQuotaBytes?.trim() &&
+    auth.user?.storageUsedBytes?.trim() &&
+    auth.user?.monthlyDownloadQuotaBytes?.trim()
+  ) {
+    return;
+  }
+  try {
+    const s = await settingsApi.getSettings();
+    auth.mergeUserProfile({
+      storageUsedBytes: s.storageUsedBytes,
+      storageQuotaBytes: s.storageQuotaBytes,
+      monthlyDownloadQuotaBytes: s.monthlyDownloadQuotaBytes,
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 onMounted(() => {
   try {
     sidebarCollapsed.value = localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1';
   } catch {
     /* private mode / unavailable */
   }
+  void syncUserQuotasFromApi();
+});
+
+watch(() => auth.isAuthenticated, (ok) => {
+  if (ok) void syncUserQuotasFromApi();
 });
 
 watch(sidebarCollapsed, (v) => {
@@ -129,10 +214,35 @@ async function onLogout() {
       </p>
 
       <div v-show="!sidebarCollapsed" class="storage-hint">
-        <div class="storage-label">{{ t('layout.storagePlanned') }}</div>
-        <div class="storage-bar"><span style="width: 35%" /></div>
-        <div class="storage-meta">{{ t('layout.storageHint') }}</div>
+        <template v-if="hasStorageQuotaInfo">
+          <div class="storage-label">{{ t('layout.storageUsage') }}</div>
+          <div
+            class="storage-bar"
+            :class="{ warn: storageOverQuotaSide }"
+          >
+            <span :style="{ width: `${storageBarWidth}%` }" />
+          </div>
+          <div class="storage-meta">
+            {{ formatUsedSide }} / {{ formatQuotaSide }} ({{ storagePct }}%)
+          </div>
+          <div class="storage-meta secondary">
+            {{
+              t('layout.monthlyDlCap', {
+                cap: formatMonthlySide,
+              })
+            }}
+          </div>
+          <div v-if="storageOverQuotaSide" class="storage-warn">
+            {{ t('layout.storageOverSoft') }}
+          </div>
+        </template>
+        <template v-else>
+          <div class="storage-label">{{ t('layout.storageUsage') }}</div>
+          <div class="storage-meta">{{ t('layout.storageLoading') }}</div>
+        </template>
       </div>
+
+      <AppVersionLabel v-show="!sidebarCollapsed" class="sidebar-version" />
     </aside>
 
     <div class="main">
@@ -342,6 +452,11 @@ async function onLogout() {
   color: rgba(255, 255, 255, 0.42);
 }
 
+.sidebar-version {
+  margin-top: 0.35rem;
+  padding: 0 0.75rem;
+}
+
 .storage-hint {
   margin-top: auto;
   padding: 0.75rem;
@@ -370,10 +485,25 @@ async function onLogout() {
   background: linear-gradient(90deg, var(--cs-accent), #5be0ff);
 }
 
+.storage-bar.warn span {
+  background: linear-gradient(90deg, #e8a04a, #ff8b8b);
+}
+
 .storage-meta {
-  margin-top: 0.45rem;
+  margin-top: 0.35rem;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.storage-meta.secondary {
+  margin-top: 0.25rem;
+  font-size: 0.68rem;
+}
+
+.storage-warn {
+  margin-top: 0.4rem;
   font-size: 0.72rem;
-  color: var(--cs-muted);
+  color: #f0c987;
   line-height: 1.35;
 }
 

@@ -1,5 +1,6 @@
 import auth from './auth';
 import common from './common';
+import admin from './admin';
 import dashboard from './dashboard';
 import errors from './errors';
 import files from './files';
@@ -17,6 +18,7 @@ export default {
   errors,
   layout,
   auth,
+  admin,
   taskMeta,
   dashboard,
   tasksPage,

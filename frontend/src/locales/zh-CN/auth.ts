@@ -32,4 +32,31 @@ export default {
   backToLogin: '返回登录',
   registerFailed:
     '注册未成功，可能该邮箱已有账号，或网络不稳，请稍后再试',
+
+  registerNeedEmail: '请先填写邮箱。',
+  registerCodeSentHint: '若邮箱尚未注册且系统已开启发信，验证码将发往你的邮箱（请留意垃圾箱）。',
+  registerEmailCodeLabel: '邮箱验证码',
+  registerEmailCodePlaceholder: '请输入 6 位数字',
+  registerSendCode: '获取验证码',
+  registerSendingCode: '发送中…',
+  registerResendCooldown: '{sec} 秒后可重试',
+  registerCaptchaBeforeCodeHint: '需先填写图形验证码后再获取邮箱验证码。',
+  registerCaptchaResendHint: '再次获取验证码前，请先输入新图形验证码。',
+  registerCodeFormat: '请输入 6 位数字验证码。',
+
+  forgotPasswordLink: '忘记密码？',
+  forgotPasswordTitle: '忘记密码',
+  forgotPasswordTagline:
+    '提交后我们会向该邮箱发送重置链接（仅限已注册的有效账号）。',
+  forgotSubmit: '发送重置邮件',
+  forgotSending: '发送中…',
+  forgotPasswordDoneHint:
+    '若该邮箱已注册，你将很快收到邮件（也请检查垃圾箱）。为保护隐私，我们不会提示邮箱是否在系统中。',
+  invalidResetToken: '重置链接无效或缺失，请从邮件重新打开或通过「忘记密码」再申请。',
+  resetPasswordTitle: '重置密码',
+  resetPasswordTagline: '设置新密码后即可使用新密码登录。',
+  resetPasswordSubmit: '更新密码',
+  resetSubmitting: '提交中…',
+  resetSuccessHint: '密码已更新，请返回登录并使用新密码。',
+  resetLinkInvalidHint: '无效或已过期的重置链接',
 } as const;

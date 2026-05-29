@@ -1,6 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '@/layouts/MainLayout.vue';
 import { i18n } from '@/locales';
+import {
+  adminBasePath,
+  adminLoginPath,
+  isValidAdminDateSegment,
+  parseAdminDateFromPath,
+} from '@/utils/adminEntry';
 
 function documentTitleForRoute(
   name: string | symbol | undefined,
@@ -11,6 +17,10 @@ function documentTitleForRoute(
       return t('auth.login');
     case 'register':
       return t('auth.register');
+    case 'forgot-password':
+      return t('auth.forgotPasswordTitle');
+    case 'reset-password':
+      return t('auth.resetPasswordTitle');
     case 'dashboard':
       return t('layout.titleDashboard');
     case 'task-new':
@@ -27,6 +37,22 @@ function documentTitleForRoute(
       return t('layout.titleUrlExtract');
     case 'url-extract-public':
       return t('urlExtract.publicTitle');
+    case 'admin-login':
+      return t('admin.loginTitle');
+    case 'admin-home':
+      return t('admin.homeTitle');
+    case 'admin-users':
+      return t('admin.navUsers');
+    case 'admin-user-detail':
+      return t('admin.userDetailTitle');
+    case 'admin-tasks':
+      return t('admin.navTasks');
+    case 'admin-task-detail':
+      return t('admin.taskDetailTitle');
+    case 'admin-user-files':
+      return t('admin.userMediaTitle');
+    case 'admin-media-detail':
+      return t('admin.mediaDetailTitle');
     default:
       return t('common.workspace');
   }
@@ -48,6 +74,18 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('@/views/ForgotPasswordView.vue'),
+      meta: { guest: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/views/ResetPasswordView.vue'),
+      meta: { guest: true },
+    },
+    {
       path: '/tools',
       component: () => import('@/layouts/PublicToolLayout.vue'),
       children: [
@@ -55,6 +93,60 @@ const router = createRouter({
           path: 'url-extract',
           name: 'url-extract-public',
           component: () => import('@/views/UrlExtractPublicView.vue'),
+        },
+      ],
+    },
+    {
+      path: '/admin',
+      name: 'admin-bare',
+      component: () => import('@/views/admin/AdminBlankView.vue'),
+    },
+    {
+      path: '/admin/:yyyymmdd/login',
+      name: 'admin-login',
+      component: () => import('@/views/admin/AdminLoginView.vue'),
+      meta: { adminGuest: true },
+    },
+    {
+      path: '/admin/:yyyymmdd',
+      component: () => import('@/layouts/AdminLayout.vue'),
+      meta: { requiresAdminAuth: true },
+      children: [
+        { path: '', redirect: { name: 'admin-home' } },
+        {
+          path: 'home',
+          name: 'admin-home',
+          component: () => import('@/views/admin/AdminHomeView.vue'),
+        },
+        {
+          path: 'users',
+          name: 'admin-users',
+          component: () => import('@/views/admin/AdminUsersView.vue'),
+        },
+        {
+          path: 'users/:id',
+          name: 'admin-user-detail',
+          component: () => import('@/views/admin/AdminUserDetailView.vue'),
+        },
+        {
+          path: 'users/:userId/files',
+          name: 'admin-user-files',
+          component: () => import('@/views/admin/AdminUserMediaView.vue'),
+        },
+        {
+          path: 'tasks',
+          name: 'admin-tasks',
+          component: () => import('@/views/admin/AdminTasksView.vue'),
+        },
+        {
+          path: 'tasks/:id',
+          name: 'admin-task-detail',
+          component: () => import('@/views/admin/AdminTaskDetailView.vue'),
+        },
+        {
+          path: 'media-files/:id',
+          name: 'admin-media-detail',
+          component: () => import('@/views/admin/AdminMediaDetailView.vue'),
         },
       ],
     },
@@ -109,19 +201,52 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('accessToken');
-  if (to.meta.requiresAuth && !token) {
+  const accessToken = localStorage.getItem('accessToken');
+  const adminAccessToken = localStorage.getItem('adminAccessToken');
+
+  /** 裸 `/admin`：空白占位，不暴露真实登录 URL */
+  if (to.path === '/admin' || to.path === '/admin/') {
+    return true;
+  }
+
+  if (to.path.startsWith('/admin')) {
+    const seg = parseAdminDateFromPath(to.path);
+    if (seg === null || !isValidAdminDateSegment(seg)) {
+      return { path: '/' };
+    }
+
+    if (to.name === 'admin-login') {
+      if (adminAccessToken) {
+        return { path: `${adminBasePath()}/home` };
+      }
+      return true;
+    }
+
+    if (!adminAccessToken) {
+      return {
+        path: adminLoginPath(),
+        query: { redirect: to.fullPath },
+      };
+    }
+    return true;
+  }
+
+  if (to.meta.requiresAuth && !accessToken) {
     const redirect =
       to.fullPath && to.fullPath !== '/' ? { redirect: to.fullPath } : {};
     return { path: '/login', query: redirect };
   }
-  if (to.meta.guest && token) {
+  if (to.meta.guest && accessToken) {
     return { path: '/' };
   }
   return true;
 });
 
 router.afterEach((to) => {
+  if (to.name === 'admin-bare') {
+    document.title = '';
+    return;
+  }
   const page = documentTitleForRoute(to.name);
   const suffix = i18n.global.t('layout.documentTitleSuffix');
   document.title = `${page} · ${suffix}`;

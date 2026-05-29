@@ -1,5 +1,10 @@
 export default {
   title: 'Settings',
+  quotaCard: 'Storage & download caps',
+  storageUsedLine: 'Storage used: {used} / {quota} (~{pct}%)',
+  monthlyDlLine: 'Monthly download cap (egress): {cap}',
+  storageOverQuotaWarn:
+    'You are using more storage than your quota allows; creating new downloads may fail.',
   loadFailed:
     'Could not load settings. Sign in and check your network, then try again.',
   errPrefsBare: 'Invalid “Preferences” JSON.',

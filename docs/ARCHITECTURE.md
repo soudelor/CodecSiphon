@@ -45,7 +45,7 @@ flowchart TB
   end
 
   subgraph data["数据与存储"]
-    PG[("PostgreSQL")]
+    DB[("MySQL")]
     REDIS[("Redis")]
     FS["本地文件存储"]
   end
@@ -69,11 +69,11 @@ flowchart TB
   WRK --> YTDLP
   WRK --> FS
   WRK --> PROC
-  AUTH --> PG
-  TASK --> PG
-  SUB --> PG
-  FILE --> PG
-  CFG --> PG
+  AUTH --> DB
+  TASK --> DB
+  SUB --> DB
+  FILE --> DB
+  CFG --> DB
   WS --> REDIS
   API --> REDIS
 ```
@@ -90,7 +90,7 @@ flowchart TB
 | 运行时 | Node.js LTS（≥20） | — |
 | API 框架 | NestJS（模块化 + DI）或 Fastify | Express |
 | ORM | Prisma 或 Drizzle | TypeORM |
-| 数据库 | PostgreSQL 15+ | — |
+| 数据库 | MySQL 8+（与 Prisma 迁移一致） | — |
 | 缓存/队列 | Redis 7 + BullMQ | Bull（legacy） |
 | 实时通道 | Socket.IO / ws + Redis adapter | SSE only |
 | 验证 | Zod / class-validator | — |
@@ -104,17 +104,17 @@ flowchart TB
 
 - `api`：1 进程  
 - `worker`：1～N 进程（与 CPU/磁盘带宽匹配）  
-- `PostgreSQL`、`Redis`：同机或 Docker Compose  
+- `MySQL`、`Redis`：同机或 Docker Compose  
 
 **生产分离**
 
-- API 与 Worker 分 Deployment，Redis/PG 托管；对象存储若上云再接 OSS/S3。
+- API 与 Worker 分 Deployment，Redis/MySQL 托管；对象存储若上云再接 OSS/S3。
 
 ## 5. 核心模块职责
 
 ### 5.1 API 服务
 
-- 用户注册登录、资料、密码重置（邮件可选）。
+- 用户注册登录、资料：[注册邮箱验证码](./REGISTER_EMAIL_VERIFICATION_REQUIREMENTS.md)（产品与数据模型占位见该文档）、密码重置（邮件可选）。
 - CRUD：下载任务、订阅、文件记录、用户设置。
 - **链接解析（URL Extract）**：基于 yt-dlp `-J` + `--flat-playlist` 拉取播放列表/频道类页面的条目（标题、时长、分辨率、发布时间、可复制链接）；`/url-extract/preview-public` 面向未登录引流（条数预览 + 严格 IP 限流），`/url-extract/parse` 面向已登录完整列表（有配置上限）。详见 [URL_EXTRACT.md](URL_EXTRACT.md)。
 - **不写长阻塞**：创建任务只入队并返回 `taskId`；进度查询读 DB + 缓存。
@@ -123,7 +123,7 @@ flowchart TB
 
 - 消费队列 Job：`PARSE_URL`、`DOWNLOAD_SINGLE`、`DOWNLOAD_PLAYLIST_CHILD`、`POST_PROCESS`、`SUBSCRIPTION_POLL`。
 - 调用 yt-dlp：解析标题、格式列表、下载；错误分类（网络、版权、磁盘满）写入任务日志。
-- 更新进度：周期性写 Redis（高频）+ 降采样写 PostgreSQL（如每 5% 或每 N 秒）。
+- 更新进度：周期性写 Redis（高频）+ 降采样写 MySQL（如每 5% 或每 N 秒）。
 
 ### 5.3 订阅调度
 
@@ -175,7 +175,7 @@ flowchart TB
 
 ## 10. 演进路线（建议顺序）
 
-1. 用户认证 + 任务 CRUD + 单 Worker + PostgreSQL + Redis + BullMQ。  
+1. 用户认证 + 任务 CRUD + 单 Worker + MySQL + Redis + BullMQ。  
 2. WebSocket 进度 + 播放列表子任务。  
 3. 订阅调度 + 配额。  
 4. FFmpeg 后处理与字幕嵌入。  

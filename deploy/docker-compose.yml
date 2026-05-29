@@ -1,6 +1,6 @@
 name: codec-siphon-app
 
-# 仅编排应用：PostgreSQL / MySQL 与 Redis 已在生产环境运行。
+# 仅编排应用：外部 MySQL 与 Redis 已在生产环境运行。
 # 使用方式见 deploy/README.md
 
 services:
@@ -8,8 +8,6 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
-      args:
-        DATABASE_PROVIDER: ${DATABASE_PROVIDER:-postgresql}
     restart: unless-stopped
     ports:
       - "${API_PORT:-3000}:${PORT:-3000}"

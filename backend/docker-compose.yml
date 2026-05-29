@@ -1,14 +1,18 @@
-# Local PostgreSQL + Redis for Prisma, API, and BullMQ (docs/ARCHITECTURE.md).
+# Local MySQL + Redis for Prisma migrate, API, and BullMQ (docs/ARCHITECTURE.md).
 services:
-  postgres:
-    image: postgres:16-alpine
+  mysql:
+    image: mysql:8.4
     restart: unless-stopped
     ports:
-      - '5432:5432'
+      - '3306:3306'
     environment:
-      POSTGRES_USER: codec_siphon
-      POSTGRES_PASSWORD: codec_siphon
-      POSTGRES_DB: codec_siphon
+      MYSQL_ROOT_PASSWORD: codec_siphon_root
+      MYSQL_DATABASE: codec_siphon
+      MYSQL_USER: codec_siphon
+      MYSQL_PASSWORD: codec_siphon
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
 
   redis:
     image: redis:7-alpine

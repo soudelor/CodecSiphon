@@ -15,13 +15,14 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UserAudienceGuard } from '../common/guards/user-audience.guard';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { PreviewUrlDto } from './dto/preview-url.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TasksService } from './tasks.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), UserAudienceGuard)
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasks: TasksService) {}

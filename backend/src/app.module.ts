@@ -5,7 +5,9 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
 import { DownloadModule } from './download/download.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { MediaModule } from './media/media.module';
@@ -45,8 +47,10 @@ const envFilePaths = [...new Set(envCandidates.filter((path) => existsSync(path)
       }),
     }),
     PrismaModule,
+    AuditModule,
     DownloadModule,
     AuthModule,
+    AdminModule,
     SecurityModule,
     MediaModule,
     SubscriptionsModule,

@@ -1,5 +1,5 @@
-// MySQL — keep in sync with schema.postgresql.prisma.
-// CodecSiphon — aligned with docs/DATABASE_DESIGN.md
+// CodecSiphon — MySQL only (canonical). Edit this file; run `npm run prisma:generate` / `npm run prisma:migrate`.
+// Aligned with docs/DATABASE_DESIGN.md
 
 generator client {
   provider = "prisma-client-js"
@@ -45,14 +45,23 @@ enum SubscriptionStatus {
   paused
 }
 
+enum RefreshAudience {
+  user
+  admin
+}
+
 model User {
   id                String    @id @default(uuid())
   email             String    @unique @db.VarChar(255)
   passwordHash      String    @map("password_hash") @db.VarChar(255)
   displayName       String?   @map("display_name") @db.VarChar(100)
   role              UserRole  @default(user)
-  storageQuotaBytes BigInt    @default(107374182400) @map("storage_quota_bytes")
+  isActive          Boolean   @default(true) @map("is_active")
+  disabledAt        DateTime? @map("disabled_at") @db.DateTime(3)
+  storageQuotaBytes BigInt    @default(1073741824) @map("storage_quota_bytes")
   storageUsedBytes  BigInt    @default(0) @map("storage_used_bytes")
+  // 单月出站下载配额上限（字节）；注册缺省可读 env（default-user-quota.util）
+  monthlyDownloadQuotaBytes BigInt @default(5368709120) @map("monthly_download_quota_bytes")
   emailVerifiedAt   DateTime? @map("email_verified_at") @db.DateTime(3)
   createdAt         DateTime  @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
@@ -63,16 +72,60 @@ model User {
   downloadTasks DownloadTask[]
   subscriptions Subscription[]
   mediaFiles    MediaFile[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
 
+model RegistrationEmailCode {
+  id              String    @id @default(uuid())
+  email           String    @map("email") @db.VarChar(255)
+  codeHash        String    @map("code_hash") @db.VarChar(64)
+  expiresAt       DateTime  @map("expires_at") @db.DateTime(3)
+  verifyAttempts Int       @default(0) @map("verify_attempts")
+  usedAt          DateTime? @map("used_at") @db.DateTime(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([email, createdAt(sort: Desc)])
+  @@map("registration_email_codes")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at") @db.DateTime(3)
+  usedAt    DateTime? @map("used_at") @db.DateTime(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("password_reset_tokens")
+}
+
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  actorId    String   @map("actor_id") @db.VarChar(36)
+  action     String   @db.VarChar(64)
+  targetType String   @map("target_type") @db.VarChar(32)
+  targetId   String?  @map("target_id") @db.VarChar(36)
+  ip         String?  @db.VarChar(45)
+  detailJson Json?    @map("detail_json")
+  createdAt  DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@map("admin_audit_logs")
+}
+
 model RefreshToken {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  tokenHash String   @unique @map("token_hash") @db.VarChar(64)
-  expiresAt DateTime @map("expires_at") @db.DateTime(3)
-  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  tokenHash String           @unique @map("token_hash") @db.VarChar(64)
+  audience  RefreshAudience  @default(user)
+  expiresAt DateTime         @map("expires_at") @db.DateTime(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.DateTime(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

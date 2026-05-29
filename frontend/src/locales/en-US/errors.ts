@@ -27,4 +27,18 @@ export default {
   urlExtractSampleInvalidUrl: 'Invalid media URL',
   urlExtractSampleFailed:
     'Could not download the clip. Ensure ffmpeg is installed on the server, or try again later.',
+
+  storageQuotaEnqueueDenied:
+    'Your storage quota is full. Delete some files or ask an administrator to raise your quota before creating new download tasks.',
+
+  registrationMailDisabled:
+    'Registration mail is disabled: SMTP is not configured on the server. Try again later or contact an administrator.',
+  registrationMailSendFailed:
+    'Could not send the registration code email. Please try again later or contact an administrator.',
+  registrationCodeInvalid:
+    'The email verification code is invalid, has too many attempts, or has expired. Request a new code.',
+  emailTaken: 'This email is already registered. Sign in or use another email.',
+  registrationTooManyRequests: 'Too many requests. Please try again later.',
+  registrationServiceUnavailable:
+    'Registration verification is unavailable (database not migrated). Ask an administrator to run `npm run prisma:migrate`, or try again later.',
 } as const;

@@ -1,5 +1,4 @@
-# 生产镜像：连接外部数据库与 Redis（DATABASE_URL、REDIS_URL 等由运行时环境变量注入）
-# MySQL 请在构建时传入：--build-arg DATABASE_PROVIDER=mysql
+# 生产镜像：连接外部 MySQL 与 Redis（DATABASE_URL、REDIS_URL 等由运行时环境变量注入）
 
 FROM node:20-bookworm-slim AS deps
 
@@ -17,9 +16,6 @@ COPY prisma ./prisma
 COPY scripts ./scripts
 COPY nest-cli.json tsconfig.json tsconfig.build.json ./
 COPY src ./src
-
-ARG DATABASE_PROVIDER=postgresql
-ENV DATABASE_PROVIDER=$DATABASE_PROVIDER
 
 RUN npm run prisma:generate && npm run build
 
@@ -42,8 +38,6 @@ COPY --from=build /app/scripts ./scripts
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-ARG DATABASE_PROVIDER=postgresql
-ENV DATABASE_PROVIDER=$DATABASE_PROVIDER
 RUN node scripts/sync-prisma-provider.mjs && npx prisma generate
 
 EXPOSE 3000

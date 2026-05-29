@@ -3,7 +3,10 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+/** 生产/显式配置用完整 URL；本地 dev 默认走 Vite proxy（同源，避免 CORS） */
+const baseURL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV ? '' : 'http://localhost:3000');
 
 export const api = axios.create({
   baseURL,
@@ -52,6 +55,9 @@ api.interceptors.request.use((config) => {
   const skipAuth =
     url.includes('/auth/login') ||
     url.includes('/auth/register') ||
+    url.includes('/auth/send-registration-code') ||
+    url.includes('/auth/forgot-password') ||
+    url.includes('/auth/reset-password') ||
     url.includes('/auth/refresh') ||
     url.includes('/url-extract/preview-public');
 
@@ -82,6 +88,9 @@ api.interceptors.response.use(
       error.response?.status === 401 &&
       !url.includes('/auth/login') &&
       !url.includes('/auth/register') &&
+      !url.includes('/auth/send-registration-code') &&
+      !url.includes('/auth/forgot-password') &&
+      !url.includes('/auth/reset-password') &&
       !url.includes('/auth/refresh')
     ) {
       original._retry = true;

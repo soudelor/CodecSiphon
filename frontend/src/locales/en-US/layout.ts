@@ -11,6 +11,10 @@ export default {
   brandSub: 'Video download console',
   disclaimer:
     'This app and related resources are for personal learning and research only. Commercial use, resale, or profit is prohibited. You are responsible for any misuse.',
+  storageUsage: 'Storage',
+  storageLoading: 'Loading usage…',
+  monthlyDlCap: 'Monthly download cap: {cap}',
+  storageOverSoft: 'Over storage quota; some actions may be limited.',
   storagePlanned: 'Storage (planned)',
   storageHint: 'Your storage usage will appear here in a future update.',
   titleDashboard: 'Dashboard',
@@ -23,4 +27,6 @@ export default {
   logout: 'Sign out',
   sidebarCollapse: 'Collapse sidebar',
   sidebarExpand: 'Expand sidebar',
+  appVersion: 'Version {version}',
+  appVersionTitle: 'CodecSiphon v{version}',
 } as const;

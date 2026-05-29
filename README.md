@@ -8,7 +8,7 @@
 |------|------|
 | 运行时 | Node.js（建议 LTS ≥ 20） |
 | 框架 | NestJS 11 |
-| ORM / 迁移 | Prisma 5；**PostgreSQL**（默认）或 **MySQL**（`DATABASE_PROVIDER=mysql`，见 `backend/.env.example`） |
+| ORM / 迁移 | Prisma 5；**MySQL**（`DATABASE_URL` 见 `backend/.env.example`；`npm run prisma:migrate` 应用 MySQL 迁移） |
 | 认证 | JWT（Access）+ 数据库存 Refresh Token（SHA-256 哈希） |
 | 校验 | class-validator / class-transformer |
 | Web UI | Vue 3、Vue Router、Pinia、Axios、Vite |
@@ -32,7 +32,7 @@ CodecSiphon/
 │   │   ├── settings/        # 当前用户 user_settings（GET / PATCH）
 │   │   ├── download/        # BullMQ 队列 + yt-dlp Worker
 │   │   └── prisma/          # PrismaService
-│   ├── docker-compose.yml   # 本地 PostgreSQL + Redis
+│   ├── docker-compose.yml   # 本地 MySQL + Redis
 │   └── .env.example
 ├── docs/
 │   ├── DATABASE_DESIGN.md
@@ -44,8 +44,8 @@ CodecSiphon/
 ## 环境要求
 
 - Node.js ≥ 20（推荐）
-- Docker（可选，用于一键启动 PostgreSQL + Redis）
-- 本地或远程 **PostgreSQL** 或 **MySQL**（与 `DATABASE_PROVIDER`、`DATABASE_URL` 一致；迁移说明见下）
+- Docker（可选，用于一键启动 MySQL + Redis）
+- 本地或远程 **MySQL**（`DATABASE_URL` 为 `mysql://…`；迁移见下）
 - **Redis**（与 `REDIS_URL` 一致；BullMQ 入队与 Worker 消费需要；与 API 在同一进程内由 Nest 启动）。
 
 可选：配置 **`YTDLP_PATH`** 或确保本机 PATH 中有 **yt-dlp**，否则下载 Worker 无法执行外部下载命令。
@@ -59,7 +59,7 @@ cd backend
 docker compose up -d
 ```
 
-默认与 `backend/.env.example` 中的连接串一致：`codec_siphon` / `codec_siphon`，数据库名 `codec_siphon`。同一 compose 会启动 **Redis**（默认 `localhost:6379`），与示例中的 `REDIS_URL` 一致。
+默认与 `backend/.env.example` 中的连接串一致：用户 **`codec_siphon`** / 密码 **`codec_siphon`**，库名 **`codec_siphon`**，端口 **3306**。同一 compose 会启动 **Redis**（默认 `localhost:6379`），与示例中的 `REDIS_URL` 一致。
 
 ### 2. 配置环境变量
 
@@ -67,8 +67,7 @@ docker compose up -d
 
 编辑 `.env`，至少设置：
 
-- `DATABASE_PROVIDER`：`postgresql`（默认）或 `mysql`  
-- `DATABASE_URL`：与所选类型一致的连接串（示例见 `.env.example`）  
+- `DATABASE_URL`：**MySQL** 连接串（`mysql://…`，示例见 `.env.example`）  
 - `JWT_SECRET`：**生产环境必填**，请使用足够长的随机串；本地开发若未设置，进程会使用内置临时密钥并打日志警告（重启后 token 会失效，建议仍从 `.env.example` 复制一行）。  
 
 说明见 `backend/.env.example`。重要变量还包括 **`REDIS_URL`**（队列）、**`DOWNLOAD_ROOT`**（服务端存放媒体文件的根目录）、**`YTDLP_PATH`**（可选）及若干 **`YTDLP_*`** 站点相关参数。应用会优先读取 **`backend/.env`**（相对源码/编译目录解析，不依赖你从哪一级目录启动），再合并当前工作目录下的 `.env`（便于 monorepo 根目录覆盖变量）。若使用自带前端开发服务器，请在 `backend/.env` 中配置 **`FRONTEND_ORIGIN`**（默认已包含 `http://localhost:5173`），以便 CORS 通过；媒体文件下载接口会暴露 **`Content-Disposition`** 响应头（用于浏览器端解析建议文件名）。
@@ -88,7 +87,7 @@ cd backend
 npm install
 ```
 
-安装时会根据 **`backend/.env`** 中的 **`DATABASE_PROVIDER`**（默认 `postgresql`）将 `schema.postgresql.prisma` 或 `schema.mysql.prisma` 同步为 `prisma/schema.prisma`，再执行 `prisma generate`。**修改 Prisma 模型时**：编辑 `prisma/schema.postgresql.prisma`，运行 `npm run prisma:schemas`（会重新生成 MySQL 版 schema 并同步当前 provider 的 `schema.prisma`）。
+安装时会执行 **`postinstall`**：加载 `backend/.env`（若存在）并确认 **`prisma/schema.prisma`（MySQL）** 存在，随后在子包安装流程中配合 `prisma generate`。**修改数据模型时**：直接编辑 **`backend/prisma/schema.prisma`**，再执行 `npm run prisma:generate`；生成迁移见下。
 
 数据库相关命令需在 `backend/` 下执行（或见下文「根目录脚本」）：
 
@@ -98,10 +97,21 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-- **PostgreSQL**：`prisma/migrations` 下的 SQL 仅适用于 PostgreSQL；生产/本地用 `npm run prisma:migrate`（即 `migrate deploy`）。
-- **MySQL**：请在 `.env` 中设置 `DATABASE_PROVIDER=mysql` 与 `DATABASE_URL`（`mysql://…`）。`npm install` / `npm run prisma:generate` 会选用 MySQL schema。**首个空库**可执行 `npm run prisma:db:push` 同步表结构；不要用当前迁移目录对 MySQL 跑 `migrate deploy`（迁移 SQL 为 PostgreSQL 专用）。
+- **`npm run prisma:migrate`**（即 `prisma migrate deploy`）对**空库或已跟迁的 MySQL**应用 `prisma/migrations` 下的 **MySQL** SQL。
+- 若库**里已有表**（例如曾用 `db push` 建过），但未记录迁移，会出现 **`The database schema is not empty`**。在**确认当前库结构与基准迁移一致**后，执行一次 **基线**（只打标记、不重复建表）：
 
-开发中若需改 schema 并生成新迁移（**仅 PostgreSQL**）：
+  ```bash
+  cd backend
+  npx prisma migrate resolve --applied 20260519120000_mysql_baseline
+  ```
+
+  然后再执行 `npm run prisma:migrate`。详见 [Prisma：baseline 已有库](https://www.prisma.io/docs/guides/migrate/developing-with-prisma-migrate/baselining)。
+
+- **旧库缺 `refresh_tokens.audience`（`P2022`）**：在已把基准迁移标为已应用（或迁历史已对齐）的前提下，拉取最新代码后执行 **`npm run prisma:migrate`** 会跑迁移 **`20260519140000_refresh_tokens_audience_if_missing`**（**幂等**：列已存在则跳过）。若你尚未对基准做过 `resolve`，请先按上一条处理「非空库」再 deploy。
+
+- 开发中若 **`schema.prisma` 与数据库有偏差**且尚无迁移，可临时使用 **`npm run prisma:db:push`**（不写迁移文件；生产慎用）。
+
+开发中若需改 schema 并**生成新迁移**：
 
 ```bash
 cd backend
@@ -156,7 +166,7 @@ GET /health
 
 ## 生产部署（Docker，仅应用镜像）
 
-当 **PostgreSQL / MySQL 与 Redis 已在生产环境就绪** 时，可用 `deploy/docker-compose.yml` 一键构建并启动 **API + 前端（Nginx 静态资源）**（不包含数据库与 Redis 容器）。
+当 **MySQL 与 Redis 已在生产环境就绪** 时，可用 `deploy/docker-compose.yml` 一键构建并启动 **API + 前端（Nginx 静态资源）**（不包含数据库与 Redis 容器）。
 
 1. 复制 `deploy/.env.example` 为 `deploy/.env` 并填写连接串与密钥（详见 [deploy/README.md](deploy/README.md)）。
 2. 在仓库根目录执行：  
@@ -244,7 +254,7 @@ Authorization: Bearer <access_token>
 | `npm run build` | 编译 |
 | `npm run test` | 单元测试 |
 | `npm run prisma:generate` | 生成 Prisma Client |
-| `npm run prisma:migrate` | 生产式迁移（`migrate deploy`） |
+| `npm run prisma:migrate` | 对 MySQL 执行 `prisma migrate deploy`（需 `DATABASE_URL=mysql://…`） |
 
 仅在 `backend/` 下还有：`npm run start:prod`（先 `npm run build`）等，见 `backend/package.json`。
 

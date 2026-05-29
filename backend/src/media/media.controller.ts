@@ -17,6 +17,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SkipReplay } from '../common/security/skip-replay.decorator';
+import { UserAudienceGuard } from '../common/guards/user-audience.guard';
 import { ListMediaQueryDto } from './dto/list-media-query.dto';
 import { MediaDownloadLinkDto } from './dto/media-download-link.dto';
 import { MediaService } from './media.service';
@@ -33,7 +34,7 @@ export class MediaController {
   constructor(private readonly media: MediaService) {}
 
   @Get()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), UserAudienceGuard)
   list(@CurrentUser() user: AuthUser, @Query() query: ListMediaQueryDto) {
     return this.media.list(user.id, query);
   }
@@ -41,7 +42,7 @@ export class MediaController {
   /** 换取短期令牌，用于浏览器直链 GET /media/:id/file（流式下载） */
   @Post(':id/download-link')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), UserAudienceGuard)
   createDownloadLink(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -79,7 +80,7 @@ export class MediaController {
   }
 
   @Get(':id/download')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), UserAudienceGuard)
   async download(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -95,7 +96,7 @@ export class MediaController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), UserAudienceGuard)
   remove(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,

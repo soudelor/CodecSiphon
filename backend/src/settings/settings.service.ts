@@ -16,14 +16,32 @@ export class SettingsService {
   ) {}
 
   async get(userId: string) {
-    const row = await this.prisma.userSettings.findUnique({
-      where: { userId },
-    });
+    const [row, account] = await Promise.all([
+      this.prisma.userSettings.findUnique({
+        where: { userId },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          storageQuotaBytes: true,
+          storageUsedBytes: true,
+          monthlyDownloadQuotaBytes: true,
+        },
+      }),
+    ]);
     return {
       preferences: (row?.preferences ?? {}) as Record<string, unknown>,
       downloadDefaults: (row?.downloadDefaults ?? {}) as Record<string, unknown>,
       updatedAt: row?.updatedAt?.toISOString() ?? null,
       multiUrlMaxLinks: getMultiUrlMaxLinks(this.config),
+      storageQuotaBytes: (account?.storageQuotaBytes ?? 0n).toString(),
+      storageUsedBytes: (account?.storageUsedBytes ?? 0n).toString(),
+      monthlyDownloadQuotaBytes: (
+        account?.monthlyDownloadQuotaBytes ?? 0n
+      ).toString(),
+      storageOverQuota: account
+        ? account.storageUsedBytes > account.storageQuotaBytes
+        : false,
     };
   }
 

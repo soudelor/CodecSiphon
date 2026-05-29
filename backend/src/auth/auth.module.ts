@@ -6,8 +6,11 @@ import type { SignOptions } from 'jsonwebtoken';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CaptchaService } from './captcha.service';
+import { ForgotPasswordLimiterService } from './forgot-password-limiter.service';
+import { MailService } from './mail.service';
 import { resolveJwtSecret } from './jwt-secret.util';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { RegistrationCodeLimiterService } from './registration-code-limiter.service';
 
 @Module({
   imports: [
@@ -25,7 +28,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, CaptchaService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    CaptchaService,
+    MailService,
+    ForgotPasswordLimiterService,
+    RegistrationCodeLimiterService,
+  ],
   exports: [AuthService, JwtModule, JwtStrategy],
 })
 export class AuthModule {}

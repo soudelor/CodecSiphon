@@ -8,6 +8,8 @@ export type JwtAccessPayload = {
   sub: string;
   email: string;
   role: string;
+  /** 用户站 `user`，管理端会话 `admin`；旧 token 无此字段时视为 `user` */
+  aud?: 'user' | 'admin';
 };
 
 @Injectable()
@@ -21,6 +23,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   validate(payload: JwtAccessPayload) {
-    return { id: payload.sub, email: payload.email, role: payload.role };
+    const aud: 'user' | 'admin' = payload.aud === 'admin' ? 'admin' : 'user';
+    return {
+      id: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      aud,
+    };
   }
 }

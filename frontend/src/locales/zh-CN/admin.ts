@@ -1,0 +1,91 @@
+export default {
+  brand: '管理后台',
+  loginTitle: '管理员登录',
+  loginSubtitle: '仅限平台管理员账号',
+  backToUserSite: '返回用户站登录',
+  homeTitle: '概览',
+  homeIntro:
+    '使用左侧菜单管理用户与跨用户的下载任务。文件列表可从用户详情进入。',
+  logout: '退出管理后台',
+  navUsers: '用户',
+  navTasks: '任务',
+  userDetailTitle: '用户详情',
+  taskDetailTitle: '任务详情',
+  usersListQuotaIntro:
+    '下表单位为 M（1 M = 1 MiB = 1024×1024 字节）。点击「查看/配置」可在详情中用整数 M 保存配额。',
+  sectionQuotas: '存储与下载配额',
+  sectionAccount: '账号与权限',
+  quotaEditHint:
+    '「存储配额 / 月下载配额」请输入非负整数，单位为 M（与上表一致；保存时服务端仍存字节）。可将存储配额调低即使用量已超出仍允许保存（U-04）。',
+  viewAndEditQuotas: '查看/配置',
+  loading: '加载中…',
+  noData: '暂无数据',
+  pagePrev: '上一页',
+  pageNext: '下一页',
+  viewDetail: '详情',
+  back: '返回',
+  storageWarn: '已用量超过当前配额（保存配额仍允许，见需求 U-04）',
+  userTasks: '该用户的任务',
+  userMedia: '该用户的文件',
+  userMediaTitle: '用户文件',
+  save: '保存',
+  savedOk: '已保存',
+  deleteTask: '删除任务',
+  deleteTaskConfirm:
+    '确定删除该任务？将移除队列作业、任务目录及相关媒体记录（与用户站删除一致）。',
+  taskOwner: '归属用户',
+
+  /** 表格 / 表单 */
+  colEmail: '邮箱',
+  colDisplayName: '显示名',
+  colRole: '角色',
+  colUsed: '已用存储 (M)',
+  colQuota: '存储配额 (M)',
+  colMonthlyDlQuota: '月下载配额 (M)',
+  colFiles: '文件数',
+  colFileBytes: '存储大小 (M)',
+  colCreatedAt: '注册时间',
+  colTitle: '标题',
+  colFileName: '文件名',
+  colStatus: '状态',
+  colProgress: '进度',
+  colActions: '操作',
+  fieldRole: '角色',
+  fieldQuotaMb: '存储配额（M，整数）',
+  fieldMonthlyDlMb: '月下载配额（M，整数）',
+  errQuotaMbInvalid:
+    '「存储配额 / 月下载配额」须为 ≥0 的整数（单位 M，不可小数或留空）。',
+
+  totalRecords: '条',
+  applyFilters: '查询',
+  mediaDetailTitle: '文件详情',
+  colMime: 'MIME',
+  colRelativePath: '相对路径',
+  colChecksum: 'SHA256',
+
+  filtersTitle: '筛选',
+  hintUserEmail: '用户邮箱子串',
+
+  deletedOk: '已删除',
+
+  taskMediaSection: '本任务产生的入库文件',
+  hintFileNameContains: '文件名包含',
+  hintTaskFilterId: '按任务 UUID 精确筛选',
+  filterTaskInUserFiles: '在用户文件中查看此任务产物',
+
+  /** F-01 用户文件筛选 */
+  fileFiltersTitle: '文件筛选（F-01）',
+
+  colActive: '状态',
+  badgeActive: '启用',
+  badgeInactive: '已停用',
+  filterActiveAll: '全部状态',
+  filterActiveYes: '仅启用',
+  filterActiveNo: '仅停用',
+  fieldActive: '账号启用',
+  colDisabledAt: '停用时间',
+  deleteMedia: '删除入库文件',
+  deleteMediaConfirm:
+    '确定删除该文件？与用户站删除一致：删磁盘对象、记录并扣减归属用户用量。',
+  inactiveLoginBlocked: '已停用账号无法登录',
+};

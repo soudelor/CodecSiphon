@@ -33,7 +33,7 @@ export default {
     'Incomplete downloads stop, and the task folder plus library rows are removed permanently.',
   supportTitle: 'Support the project',
   supportBody:
-    'Every line of code reflects long nights of careful polishing; every update carries real dedication. Software development takes serious investment. If you find this product useful, feel free to scan a code to chip in. With your support, I can keep iterating and making it better.',
+    'Code can run on passion, but servers and bandwidth cost real money. Behind every free account, I’m doing my best to keep things running. If you find it useful, please scan to chip in so I can keep it going a little longer.',
   supportWechatCaption: 'WeChat Pay',
   supportAlipayCaption: 'Alipay',
   supportWechatAlt: 'WeChat Pay QR code for tips',

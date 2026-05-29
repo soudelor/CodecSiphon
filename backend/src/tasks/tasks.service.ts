@@ -22,6 +22,7 @@ import { QUEUE_DOWNLOAD } from '../download/download.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { PreviewMetadataError } from '../download/preview-metadata.error';
 import { mapYtDlpJsonToPreview, ytDlpDumpJson } from '../download/ytdlp.dump';
+import { StoragePolicyService } from '../storage-policy/storage-policy.service';
 import { getMultiUrlMaxLinks } from '../common/download-limits';
 import { sourceUrlsFromJson } from '../common/source-urls.util';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -38,7 +39,7 @@ function isActivelyDownloading(s: TaskStatus): boolean {
   );
 }
 
-function serializeTask(task: DownloadTask) {
+export function serializeTask(task: DownloadTask) {
   const { sourceUrls: rawUrls, ...rest } = task;
   return {
     ...rest,
@@ -56,6 +57,7 @@ export class TasksService {
     private readonly prisma: PrismaService,
     @InjectQueue(QUEUE_DOWNLOAD) private readonly downloadQueue: Queue,
     private readonly config: ConfigService,
+    private readonly storagePolicy: StoragePolicyService,
   ) {}
 
   async create(userId: string, dto: CreateTaskDto) {
@@ -80,6 +82,8 @@ export class TasksService {
       dto.options,
       subscriptionRow,
     );
+
+    await this.storagePolicy.assertDownloadTaskEnqueueAllowed(userId);
 
     const common = {
       userId,
@@ -442,6 +446,20 @@ export class TasksService {
 
       await tx.downloadTask.delete({ where: { id } });
     });
+  }
+
+  /**
+   * 管理端删除：复用 `remove(ownerUserId, id)` 的语义（队列、磁盘、用量回退）。
+   */
+  async removeAsAdmin(taskId: string): Promise<void> {
+    const row = await this.prisma.downloadTask.findUnique({
+      where: { id: taskId },
+      select: { userId: true },
+    });
+    if (!row) {
+      throw new NotFoundException('Task not found');
+    }
+    await this.remove(row.userId, taskId);
   }
 
   private async addDownloadJob(taskId: string): Promise<void> {

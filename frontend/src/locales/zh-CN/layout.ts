@@ -11,6 +11,10 @@ export default {
   brandSub: '视频下载控制台',
   disclaimer:
     '本应用及相关资源仅供个人学习研究使用，禁止任何商业用途。请勿用于商用、二次售卖及盈利行为，违规使用后果由使用者自行承担。',
+  storageUsage: '存储空间',
+  storageLoading: '正在加载用量…',
+  monthlyDlCap: '每月下载额度上限：{cap}',
+  storageOverSoft: '已超存储配额，新建任务等可能受限。',
   storagePlanned: '存储（规划中）',
   storageHint: '此处将显示您的存储空间使用情况（即将推出）',
   titleDashboard: '仪表盘',
@@ -23,4 +27,6 @@ export default {
   logout: '登出',
   sidebarCollapse: '收起侧栏',
   sidebarExpand: '展开侧栏',
+  appVersion: '当前版本：{version}',
+  appVersionTitle: 'CodecSiphon v{version}',
 } as const;

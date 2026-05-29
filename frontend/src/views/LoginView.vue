@@ -188,7 +188,13 @@ async function submit() {
         <div class="footer">
           <div class="footer-left">
             <span>{{ t('auth.noAccount') }}</span>
-            <RouterLink to="/register">{{ t('auth.registerLink') }}</RouterLink>
+            <span class="register-forgot-row">
+              <RouterLink to="/register">{{ t('auth.registerLink') }}</RouterLink>
+              <span class="footer-links-sep" aria-hidden="true">·</span>
+              <RouterLink to="/forgot-password">{{
+                t('auth.forgotPasswordLink')
+              }}</RouterLink>
+            </span>
           </div>
           <RouterLink class="tool-link" to="/tools/url-extract">{{
             t('auth.urlExtractPublicLink')
@@ -389,11 +395,32 @@ h1 {
   flex: 1 1 auto;
   min-width: 0;
   text-align: left;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.35rem;
+  row-gap: 0.25rem;
+}
+
+.footer-left > span:first-child {
+  margin-right: 0.1rem;
 }
 
 .footer-left a {
   color: var(--cs-accent);
-  margin-left: 0.35rem;
+}
+
+.register-forgot-row {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.footer-links-sep {
+  color: var(--cs-muted);
+  user-select: none;
 }
 
 .tool-link {

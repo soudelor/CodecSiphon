@@ -2,8 +2,6 @@
 set -e
 cd /app
 
-export DATABASE_PROVIDER="${DATABASE_PROVIDER:-postgresql}"
-
 node scripts/sync-prisma-provider.mjs
 
 if [ "${SKIP_PRISMA_MIGRATE:-0}" = "1" ]; then

@@ -105,7 +105,17 @@ export class DownloadProcessor extends WorkerHost {
       this.config.get<string>('DOWNLOAD_ROOT') ??
       join(process.cwd(), 'data', 'downloads');
     const taskDir = join(root, task.userId, taskId);
-    mkdirSync(taskDir, { recursive: true });
+    try {
+      mkdirSync(taskDir, { recursive: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await this.failTask(
+        taskId,
+        'STORAGE_ERROR',
+        `无法创建下载目录: ${message}`,
+      );
+      return;
+    }
 
     const ytdlpBin =
       this.config.get<string>('YTDLP_PATH') ??

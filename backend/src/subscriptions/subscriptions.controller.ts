@@ -15,12 +15,13 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UserAudienceGuard } from '../common/guards/user-audience.guard';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { ListSubscriptionsQueryDto } from './dto/list-subscriptions-query.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { SubscriptionsService } from './subscriptions.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), UserAudienceGuard)
 @Controller('subscriptions')
 export class SubscriptionsController {
   constructor(private readonly subscriptions: SubscriptionsService) {}

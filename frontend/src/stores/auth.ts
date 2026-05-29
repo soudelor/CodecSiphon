@@ -56,6 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
     email: string;
     password: string;
     displayName?: string;
+    emailVerificationCode: string;
   }) {
     const data = await authApi.register(body);
     persistSession(data);
@@ -71,6 +72,15 @@ export const useAuthStore = defineStore('auth', () => {
     clearSession();
   }
 
+  /** 与登录/refresh 同源字段；用于补齐旧版 localStorage 中的 user */
+  function mergeUserProfile(patch: Partial<AuthUser>): void {
+    if (!user.value) {
+      return;
+    }
+    user.value = { ...user.value, ...patch };
+    localStorage.setItem('user', JSON.stringify(user.value));
+  }
+
   return {
     accessToken,
     refreshToken,
@@ -81,5 +91,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     persistSession,
     clearSession,
+    mergeUserProfile,
   };
 });

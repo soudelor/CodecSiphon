@@ -25,4 +25,17 @@ export default {
     '该抖音链接不是视频页或作品列表页，无法用链接解析列出条目。请打开具体视频或作者主页作品 tab 后复制完整链接再试。',
   urlExtractSampleInvalidUrl: '无效的媒体链接',
   urlExtractSampleFailed: '节选下载失败，请确认服务器已安装 ffmpeg，或稍后再试',
+
+  /** 写入型下载任务入队：`storage-policy` 硬拒绝存储已满 */
+  storageQuotaEnqueueDenied:
+    '存储空间已达当前配额上限，无法新建下载任务。请删除已有文件腾出空间后再试，或联系管理员提高配额。',
+
+  /** 注册邮箱验证码（后端 `errors.*` key） */
+  registrationMailDisabled: '注册邮件未启用：服务器未配置发信（SMTP）。请联系管理员或稍后再试。',
+  registrationMailSendFailed: '注册验证码邮件发送失败，请稍后重试或联系管理员。',
+  registrationCodeInvalid: '邮箱验证码无效、已用尽尝试次数或已过期，请重新获取。',
+  emailTaken: '该邮箱已注册，请直接登录或使用其他邮箱。',
+  registrationTooManyRequests: '请求过于频繁，请稍后再试。',
+  registrationServiceUnavailable:
+    '注册验证码服务暂不可用（数据库未就绪）。请联系管理员执行 `npm run prisma:migrate`，或稍后再试。',
 } as const;

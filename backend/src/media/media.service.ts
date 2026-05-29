@@ -249,4 +249,16 @@ export class MediaService {
       }
     });
   }
+
+  /** F-03：管理员删除 — 与用户站 `remove` 相同语义（按所有者 `userId` 再走一遍校验与删除）。 */
+  async removeAsAdmin(mediaId: string): Promise<void> {
+    const row = await this.prisma.mediaFile.findUnique({
+      where: { id: mediaId },
+      select: { userId: true },
+    });
+    if (!row) {
+      throw new NotFoundException('Media file not found');
+    }
+    await this.remove(row.userId, mediaId);
+  }
 }

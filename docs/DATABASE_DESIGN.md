@@ -1,6 +1,6 @@
 # CodecSiphon — 数据库设计文档
 
-> 关系型数据库：**PostgreSQL**。命名：`snake_case`；主键：UUID（`gen_random_uuid()`）或 BIGSERIAL 均可，下文以 **UUID** 为例便于分布式扩展。
+> 关系型数据库：**MySQL**（与 `backend/prisma/schema.prisma` 一致）。命名：`snake_case`；主键：UUID（由应用或 DB 生成）等，以 **UUID** 为例便于分布式扩展。
 
 ## 1. ER 概览
 
@@ -23,7 +23,7 @@ erDiagram
   folders ||--o{ media_files : contains
 ```
 
-## 2. 枚举类型（PostgreSQL ENUM）
+## 2. 枚举类型（MySQL / Prisma `enum`）
 
 ```sql
 CREATE TYPE user_role AS ENUM ('user', 'admin');
@@ -55,8 +55,9 @@ CREATE TYPE subscription_status AS ENUM ('active', 'paused');
 | password_hash | VARCHAR(255) | NOT NULL | |
 | display_name | VARCHAR(100) | | 展示名 |
 | role | user_role | NOT NULL DEFAULT 'user' | |
-| storage_quota_bytes | BIGINT | NOT NULL DEFAULT 107374182400 | 默认例如 100GiB |
+| storage_quota_bytes | BIGINT | NOT NULL DEFAULT 1073741824 | 缺省存储上限（可由注册逻辑/env 改写；历史库以迁移为准） |
 | storage_used_bytes | BIGINT | NOT NULL DEFAULT 0 | 冗余字段，便于快速校验 |
+| monthly_download_quota_bytes | BIGINT | NOT NULL DEFAULT 5368709120 | 单月出站下载配额上限（字节；计量接入前仅占位） |
 | email_verified_at | TIMESTAMPTZ | | |
 | created_at | TIMESTAMPTZ | NOT NULL DEFAULT now() | |
 | updated_at | TIMESTAMPTZ | NOT NULL DEFAULT now() | |
@@ -239,9 +240,36 @@ CREATE TYPE subscription_status AS ENUM ('active', 'paused');
 
 索引：`(subscription_id, id DESC)`。
 
-### 3.12 `password_reset_tokens` / `email_verification_tokens`（可选）
+### 3.12 `registration_email_codes` — 注册邮箱 OTP
 
-按需拆分表或使用统一 `user_tokens(token_type, token_hash, expires_at)`；注意一次性使用与过期清理。
+注册完成**前**校验邮箱用；与 `password_reset_tokens` **分表**，避免令牌类型混淆。实现与产品规则见 [REGISTER_EMAIL_VERIFICATION_REQUIREMENTS.md](./REGISTER_EMAIL_VERIFICATION_REQUIREMENTS.md)。
+
+| 列名 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | UUID | PK | |
+| email | VARCHAR(255) | NOT NULL | 规范化小写邮箱；**无外键**——此时可能尚无 `users` 行 |
+| code_hash | VARCHAR(64) | NOT NULL | 仅存 OTP 的哈希（明文不落库） |
+| expires_at | DATETIME(3) | NOT NULL | 过期后不可核销 |
+| verify_attempts | INT | NOT NULL DEFAULT 0 | 校验失败递增；达上限拒绝核销（防爆破） |
+| used_at | DATETIME(3) | | 核销成功写入；`NULL` 表示未消费 |
+| created_at | DATETIME(3) | NOT NULL DEFAULT now() | |
+
+索引：`(email, created_at DESC)`——按邮箱取最新可用码、批量清理。
+
+### 3.13 `password_reset_tokens` — 忘记密码
+
+| 列名 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | UUID | PK | |
+| user_id | UUID | FK → users(id) ON DELETE CASCADE NOT NULL | |
+| token_hash | VARCHAR(64) | UNIQUE NOT NULL | 仅存哈希 |
+| expires_at | DATETIME(3) | NOT NULL | |
+| used_at | DATETIME(3) | | 一次性使用 |
+| created_at | DATETIME(3) | NOT NULL DEFAULT now() | |
+
+索引：`(user_id, created_at DESC)`。
+
+需求与流程见 [PASSWORD_RESET_REQUIREMENTS.md](./PASSWORD_RESET_REQUIREMENTS.md)、技术设计见 [PASSWORD_RESET_TECH_DESIGN.md](./PASSWORD_RESET_TECH_DESIGN.md)。
 
 ## 4. 数据一致性与业务规则
 
@@ -258,7 +286,7 @@ CREATE TYPE subscription_status AS ENUM ('active', 'paused');
 ## 6. 初始迁移顺序建议
 
 1. ENUM / users  
-2. user_settings、refresh_tokens  
+2. user_settings、refresh_tokens、`password_reset_tokens`、`registration_email_codes`  
 3. folders  
 4. subscriptions、subscription_runs  
 5. download_tasks、task_items、task_logs  

@@ -1,5 +1,9 @@
 export default {
   title: '设置',
+  quotaCard: '存储与下载配额',
+  storageUsedLine: '已用存储：{used} / {quota}（约 {pct}%）',
+  monthlyDlLine: '每月下载额度上限（出站）：{cap}',
+  storageOverQuotaWarn: '当前已用存储已超过配额，可能影响新建下载任务。',
   loadFailed:
     '无法加载设置，请确认已登录；若仍失败，请检查网络或稍后再试',
   errPrefsBare: '「个人偏好」格式有误',

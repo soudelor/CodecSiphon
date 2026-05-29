@@ -4,6 +4,7 @@ import { createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import type { Request, Response } from 'express';
 import { SkipReplay } from '../common/security/skip-replay.decorator';
+import { UserAudienceGuard } from '../common/guards/user-audience.guard';
 import { UrlExtractBodyDto } from './dto/url-extract-body.dto';
 import { UrlExtractSampleBodyDto } from './dto/url-extract-sample-body.dto';
 import {
@@ -24,7 +25,7 @@ export class UrlExtractController {
 
   @Post('parse')
   @HttpCode(200)
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), UserAudienceGuard)
   parse(@Body() body: UrlExtractBodyDto) {
     return this.urlExtract.parseFull(body.url);
   }
@@ -34,7 +35,7 @@ export class UrlExtractController {
    */
   @Post('sample')
   @HttpCode(200)
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), UserAudienceGuard)
   async sample(
     @Body() body: UrlExtractSampleBodyDto,
     @Res() res: Response,

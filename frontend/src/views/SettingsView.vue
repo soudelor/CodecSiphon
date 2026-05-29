@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import * as settingsApi from '@/api/settings';
+import { useAuthStore } from '@/stores/auth';
+import {
+  formatBytesBigIntString,
+  storageUsePercentString,
+} from '@/utils/format-bytes-bigint';
 
 const { t } = useI18n();
+const auth = useAuthStore();
 
 const DL_FORM_KEYS = [
   'format',
@@ -22,6 +28,41 @@ const okMsg = ref('');
 const prefsText = ref('{}');
 const downloadExtraText = ref('{}');
 const updatedAt = ref<string | null>(null);
+
+const quotaUsedBytes = ref('0');
+const quotaLimitBytes = ref('0');
+const quotaMonthlyBytes = ref('0');
+const quotaOver = ref(false);
+
+const quotaUsedFmt = computed(() =>
+  formatBytesBigIntString(quotaUsedBytes.value),
+);
+const quotaLimitFmt = computed(() =>
+  formatBytesBigIntString(quotaLimitBytes.value),
+);
+const quotaMonthlyFmt = computed(() =>
+  formatBytesBigIntString(quotaMonthlyBytes.value),
+);
+const quotaPct = computed(() =>
+  storageUsePercentString(quotaUsedBytes.value, quotaLimitBytes.value),
+);
+
+function applyQuotaFromSettings(payload: {
+  storageUsedBytes: string;
+  storageQuotaBytes: string;
+  monthlyDownloadQuotaBytes: string;
+  storageOverQuota: boolean;
+}) {
+  quotaUsedBytes.value = payload.storageUsedBytes;
+  quotaLimitBytes.value = payload.storageQuotaBytes;
+  quotaMonthlyBytes.value = payload.monthlyDownloadQuotaBytes;
+  quotaOver.value = payload.storageOverQuota;
+  auth.mergeUserProfile({
+    storageUsedBytes: payload.storageUsedBytes,
+    storageQuotaBytes: payload.storageQuotaBytes,
+    monthlyDownloadQuotaBytes: payload.monthlyDownloadQuotaBytes,
+  });
+}
 
 const format = ref('');
 const proxyUrl = ref('');
@@ -110,6 +151,12 @@ async function load() {
     prefsText.value = JSON.stringify(data.preferences ?? {}, null, 2);
     applyDownloadDefaults((data.downloadDefaults ?? {}) as Record<string, unknown>);
     updatedAt.value = data.updatedAt;
+    applyQuotaFromSettings({
+      storageUsedBytes: data.storageUsedBytes,
+      storageQuotaBytes: data.storageQuotaBytes,
+      monthlyDownloadQuotaBytes: data.monthlyDownloadQuotaBytes,
+      storageOverQuota: data.storageOverQuota,
+    });
   } catch {
     errorMsg.value = t('settings.loadFailed');
   } finally {
@@ -152,6 +199,12 @@ async function save() {
     });
     updatedAt.value = next.updatedAt;
     applyDownloadDefaults((next.downloadDefaults ?? {}) as Record<string, unknown>);
+    applyQuotaFromSettings({
+      storageUsedBytes: next.storageUsedBytes,
+      storageQuotaBytes: next.storageQuotaBytes,
+      monthlyDownloadQuotaBytes: next.monthlyDownloadQuotaBytes,
+      storageOverQuota: next.storageOverQuota,
+    });
     okMsg.value = t('settings.okSaved');
   } catch (e) {
     errorMsg.value = apiErrorMessage(e);
@@ -187,6 +240,29 @@ async function save() {
     <p v-if="okMsg" class="ok">{{ okMsg }}</p>
 
     <div v-if="!loading" class="stack">
+      <div class="card quota-card">
+        <h3 class="h">{{ t('settings.quotaCard') }}</h3>
+        <p v-if="quotaOver" class="quota-warn">{{ t('settings.storageOverQuotaWarn') }}</p>
+        <p class="muted quota-line">
+          {{
+            t('settings.storageUsedLine', {
+              used: quotaUsedFmt,
+              quota: quotaLimitFmt,
+              pct: quotaPct,
+            })
+          }}
+        </p>
+        <div class="quota-bar" :class="{ over: quotaOver }">
+          <span :style="{ width: `${Math.min(100, quotaPct)}%` }" />
+        </div>
+        <p class="muted small">
+          {{
+            t('settings.monthlyDlLine', {
+              cap: quotaMonthlyFmt,
+            })
+          }}
+        </p>
+      </div>
       <div class="card">
         <h3 class="h">{{ t('settings.prefsCard') }}</h3>
         <div class="field">
@@ -331,6 +407,37 @@ async function save() {
   margin: 0 0 0.75rem;
   font-size: 1rem;
   font-weight: 600;
+}
+
+.quota-card .quota-line {
+  margin: 0 0 0.65rem;
+  line-height: 1.5;
+}
+
+.quota-warn {
+  margin: 0 0 0.85rem;
+  font-size: 0.82rem;
+  color: #e8b44a;
+}
+
+.quota-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.quota-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cs-accent, #3ecf8e), #1fb6a6);
+  transition: width 0.2s ease;
+}
+
+.quota-bar.over span {
+  background: linear-gradient(90deg, #e89a3a, #d96b4a);
 }
 
 .grid {

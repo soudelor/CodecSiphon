@@ -74,6 +74,12 @@ export type AuthUser = {
   email: string;
   displayName: string | null;
   role: string;
+  /** 用户站与管理端会话返回均可带；停用账号无法在登录会话中继续使用 */
+  isActive?: boolean;
+  /** 以下为可选：旧会话本地缓存可能没有，进入主站后会经 /settings 补全 */
+  storageQuotaBytes?: string;
+  storageUsedBytes?: string;
+  monthlyDownloadQuotaBytes?: string;
 };
 
 export type AuthResponse = {
@@ -173,4 +179,8 @@ export type UserSettingsPayload = {
   updatedAt: string | null;
   /** 多条链接任务允许的 URL 数量上限（来自服务器配置） */
   multiUrlMaxLinks: number;
+  storageQuotaBytes: string;
+  storageUsedBytes: string;
+  monthlyDownloadQuotaBytes: string;
+  storageOverQuota: boolean;
 };

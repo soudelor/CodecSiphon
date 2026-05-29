@@ -1,8 +1,6 @@
 /**
- * Copies prisma/schema.<DATABASE_PROVIDER>.prisma → prisma/schema.prisma
- * so one repo supports PostgreSQL and MySQL (Prisma requires a single provider per generate).
- *
- * Loads backend/.env if present (does not override existing process.env).
+ * MySQL-only: `prisma/schema.prisma` is the single source of truth (no PG/MySQL copy step).
+ * Loads backend/.env so prisma CLI and npm scripts see DATABASE_URL.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -33,21 +31,16 @@ function loadEnvFile(filePath) {
 
 loadEnvFile(path.join(backendRoot, '.env'));
 
-const provider = (process.env.DATABASE_PROVIDER || 'postgresql').toLowerCase();
-if (provider !== 'postgresql' && provider !== 'mysql') {
-  console.error(
-    `[sync-prisma-provider] DATABASE_PROVIDER must be "postgresql" or "mysql", got: ${provider}`,
+const schemaPath = path.join(backendRoot, 'prisma', 'schema.prisma');
+if (!fs.existsSync(schemaPath)) {
+  console.error(`[sync-prisma-provider] Missing ${schemaPath}`);
+  process.exit(1);
+}
+
+const url = process.env.DATABASE_URL || '';
+if (url && !/^mysql:/i.test(url)) {
+  console.warn(
+    '[sync-prisma-provider] DATABASE_URL should start with mysql:// (MySQL-only repo).',
   );
-  process.exit(1);
 }
-
-const src = path.join(backendRoot, 'prisma', `schema.${provider}.prisma`);
-const dest = path.join(backendRoot, 'prisma', 'schema.prisma');
-
-if (!fs.existsSync(src)) {
-  console.error(`[sync-prisma-provider] Missing ${src}`);
-  process.exit(1);
-}
-
-fs.copyFileSync(src, dest);
-console.log(`[sync-prisma-provider] ${path.basename(src)} → schema.prisma`);
+console.log('[sync-prisma-provider] Using prisma/schema.prisma (MySQL)');
