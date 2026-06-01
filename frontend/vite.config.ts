@@ -25,7 +25,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/auth': { target: 'http://127.0.0.1:3000', changeOrigin: true },
-      '/admin': { target: 'http://127.0.0.1:3000', changeOrigin: true },
+      /** 仅代理管理端 API；勿用 `/admin` 通配，否则会吞掉前端 `/admin/:date/login` 等页面路由 */
+      '/admin/auth': { target: 'http://127.0.0.1:3000', changeOrigin: true },
+      '/admin/users': { target: 'http://127.0.0.1:3000', changeOrigin: true },
+      '/admin/tasks': { target: 'http://127.0.0.1:3000', changeOrigin: true },
+      '/admin/media-files': { target: 'http://127.0.0.1:3000', changeOrigin: true },
       '/tasks': { target: 'http://127.0.0.1:3000', changeOrigin: true },
       '/media': { target: 'http://127.0.0.1:3000', changeOrigin: true },
       '/settings': { target: 'http://127.0.0.1:3000', changeOrigin: true },
